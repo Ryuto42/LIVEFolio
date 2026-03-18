@@ -13,16 +13,25 @@
             <div class="header-title">new live record</div>
         </div>
 
-        <div class="top-nav" style="padding-top: 0;">
-            <div class="toggle-switch" style="width: 100%;">
-                <div class="active">ワンマン</div>
-                <div>フェス</div>
-                <div>対バン</div>
+        <form action="/add" method="POST" enctype="multipart/form-data">
+            <div class="top-nav" style="padding-top: 0;">
+                <div class="toggle-radio">
+                    <input type="radio" id="type_oneman" name="live_type" value="ワンマン" checked>
+                    <label for="type_oneman">ワンマン</label>
+                    
+                    <input type="radio" id="type_fes" name="live_type" value="フェス">
+                    <label for="type_fes">フェス</label>
+                    
+                    <input type="radio" id="type_taiban" name="live_type" value="対バン">
+                    <label for="type_taiban">対バン</label>
+                </div>
             </div>
-        </div>
 
-        <div class="form-container">
-            <form action="/add" method="POST">
+            <div class="form-container">
+                <div class="form-group">
+                    <label>カバー画像</label>
+                    <input type="file" name="image" accept="image/*" style="padding: 12px; background: transparent;">
+                </div>
                 <div class="form-group">
                     <label>アーティスト名 *</label>
                     <input type="text" name="artist_name" required>
@@ -37,8 +46,8 @@
                 </div>
                 
                 <button type="submit" class="submit-btn">登録する</button>
-            </form>
-        </div>
+            </div>
+        </form>
     </div>
 </body>
 </html>
