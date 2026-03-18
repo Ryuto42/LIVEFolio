@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>livefolio - new</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <div class="header-new">
+            <a href="/" class="close-btn">×</a>
+            <div class="header-title">new live record</div>
+        </div>
+
+        <div class="top-nav" style="padding-top: 0;">
+            <div class="toggle-switch" style="width: 100%;">
+                <div class="active">ワンマン</div>
+                <div>フェス</div>
+                <div>対バン</div>
+            </div>
+        </div>
+
+        <div class="form-container">
+            <form action="/add" method="POST">
+                <div class="form-group">
+                    <label>アーティスト名 *</label>
+                    <input type="text" name="artist_name" required>
+                </div>
+                <div class="form-group">
+                    <label>イベントタイトル *</label>
+                    <input type="text" name="event_title" required>
+                </div>
+                <div class="form-group">
+                    <label>日付 *</label>
+                    <input type="date" name="concert_date" required>
+                </div>
+                
+                <button type="submit" class="submit-btn">登録する</button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
