@@ -60,12 +60,14 @@
             <div class="card-list">
                 {% for history in lives %}
                 <a href="/detail/{{ history['id'] }}" class="card-link">
-                    <div class="card">
+                    <div class="card {{ history['time_class'] }}">
+                        {% if history['time_class'] == 'card-past' %}
                         <div class="card-image" style="overflow: hidden;">
                             {% if history['image_data'] %}
                                 <img src="{{ history['image_data'] }}" style="width: 100%; height: 100%; object-fit: cover;">
                             {% endif %}
                         </div>
+                        {% endif %}
                         <div class="card-info">
                             <div class="card-date">{{ history['concert_date'] }}</div>
                             <div class="card-artist">{{ history['card_main_title'] }}</div>
@@ -80,13 +82,15 @@
 
         <div id="tracks" class="list-container">
             {% for t in track_ranking %}
-            <div class="ranking-item">
-                <div class="ranking-name">
-                    {{ t.song }}
-                    <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px; font-weight: normal;">{{ t.artist }}</span>
+            <a href="https://open.spotify.com/search/{{ t.artist }} {{ t.song }}" target="_blank" class="spotify-link" style="display: block; text-decoration: none; color: inherit;">
+                <div class="ranking-item">
+                    <div class="ranking-name">
+                        {{ t.song }}
+                        <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px; font-weight: normal;">{{ t.artist }}</span>
+                    </div>
+                    <div class="ranking-count"><span>{{ t.count }}</span>times</div>
                 </div>
-                <div class="ranking-count"><span>{{ t.count }}</span>times</div>
-            </div>
+            </a>
             {% endfor %}
         </div>
 

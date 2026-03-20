@@ -8,7 +8,7 @@
 </head>
 <body>
     <div class="app-container" style="padding-top: 80px;">
-        <div class="header-new">
+        <div class="header-new" style="position: absolute; top: 0; width: 100%; box-sizing: border-box; padding: 20px;">
             {% if request.args.get('updated') %}
                 <a href="javascript:history.go(-3)" class="close-btn" style="text-decoration: none;">←</a>
             {% else %}
@@ -27,7 +27,7 @@
 
             <div class="detail-date">{{ history['formatted_date'] }}</div>
 
-            <div class="detail-main-title">{{ history['card_main_title'] }}</div>
+            <div class="detail-main-title">{{ history['detail_main_title'] }}</div>
             <div class="detail-sub-title">{{ history['detail_sub_title'] }}</div>
 
             <div class="detail-venue">
@@ -47,12 +47,12 @@
             {% else %}
                 {% if history['performances'] %}
                     {% for perf in history['performances'] %}
+                        {% if perf['setlist'] and perf['setlist'].strip() %}
                         <div class="setlist-block">
                             {% if history['live_type'] in ['フェス', '対バン'] %}
                                 <div class="setlist-artist">{{ perf['artist'] }}</div>
                             {% endif %}
                             
-                            {% if perf['setlist'] %}
                             <ol class="setlist-grid">
                                 {% for song in perf['setlist'].split('\n') %}
                                     {% if song.strip() %}
@@ -64,8 +64,8 @@
                                     {% endif %}
                                 {% endfor %}
                             </ol>
-                            {% endif %}
                         </div>
+                        {% endif %}
                     {% endfor %}
                 {% endif %}
             {% endif %}
