@@ -79,10 +79,13 @@
         </div>
 
         <div id="tracks" class="list-container">
-            {% for name, count in track_ranking %}
+            {% for t in track_ranking %}
             <div class="ranking-item">
-                <div class="ranking-name">{{ name }}</div>
-                <div class="ranking-count"><span>{{ count }}</span>times</div>
+                <div class="ranking-name">
+                    {{ t.song }}
+                    <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px; font-weight: normal;">{{ t.artist }}</span>
+                </div>
+                <div class="ranking-count"><span>{{ t.count }}</span>times</div>
             </div>
             {% endfor %}
         </div>
