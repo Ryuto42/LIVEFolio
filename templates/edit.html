@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>livefolio - edit</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container" style="padding-top: 80px;">
+        <div class="header-new">
+            <a href="javascript:history.back()" class="close-btn">×</a>
+            <div class="header-title">edit record</div>
+            <div style="width: 40px;"></div>
+        </div>
+
+        <form action="/update/{{ history['id'] }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="old_image_data" value="{{ history['image_data'] }}">
+            
+            <div style="padding: 0 20px;">
+                <div class="toggle-radio" style="margin-bottom: 24px;">
+                    <input type="radio" id="type_oneman" name="live_type" value="ワンマン" {% if history['live_type'] == 'ワンマン' %}checked{% endif %}>
+                    <label for="type_oneman">ワンマン</label>
+                    <input type="radio" id="type_fes" name="live_type" value="フェス" {% if history['live_type'] == 'フェス' %}checked{% endif %}>
+                    <label for="type_fes">フェス</label>
+                    <input type="radio" id="type_taiban" name="live_type" value="対バン" {% if history['live_type'] == '対バン' %}checked{% endif %}>
+                    <label for="type_taiban">対バン</label>
+                </div>
+            </div>
+
+            <div class="form-container">
+                <div class="form-group" style="margin-bottom: 8px;">
+                    <label style="font-size: 14px;">写真 <span style="color: var(--text-muted); font-weight: normal; margin-left: 8px;">会場やチケットの写真を記録しよう</span></label>
+                </div>
+                <label class="image-upload-box">
+                    <span id="upload-icon" style="display: {% if history['image_data'] %}none{% else %}block{% endif %};">＋</span>
+                    <img id="image-preview" src="{{ history['image_data'] }}" style="display: {% if history['image_data'] %}block{% else %}none{% endif %};">
+                    <input type="file" name="image" accept="image/*" id="image-input">
+                </label>
+
+                <div class="form-group">
+                    <label>イベントタイトル *</label>
+                    <input type="text" name="event_title" value="{{ history['event_title'] }}" required>
+                </div>
+                <div class="form-group">
+                    <label>会場</label>
+                    <input type="text" name="venue_name" value="{{ history['venue_name'] }}">
+                </div>
+                <div class="form-group">
+                    <label>日付 *</label>
+                    <input type="date" name="concert_date" value="{{ history['concert_date'] }}" max="9999-12-31" required>
+                </div>
+
+                <div id="performances-container">
+                    {% if history['performances'] %}
+                        {% for perf in history['performances'] %}
+                        <div class="performance-group">
+                            <div class="form-group">
+                                <label>アーティスト名 *</label>
+                                <input type="text" name="artist_name[]" value="{{ perf['artist'] }}" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>セットリスト (1行に1曲)</label>
+                                <textarea name="setlist[]" rows="4">{{ perf['setlist'] }}</textarea>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="performance-group">
+                            <div class="form-group">
+                                <label>アーティスト名 *</label>
+                                <input type="text" name="artist_name[]" value="{{ history['artist_name'] }}" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label>セットリスト (1行に1曲)</label>
+                                <textarea name="setlist[]" rows="4"></textarea>
+                            </div>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <button type="button" id="add-perf-btn" class="add-perf-btn" style="display: {% if history['live_type'] == 'ワンマン' %}none{% else %}block{% endif %};">＋ アーティストを追加</button>
+                <button type="submit" class="submit-btn">保存する</button>
+            </div>
+        </form>
+
+        <form action="/delete/{{ history['id'] }}" method="POST" onsubmit="return confirm('本当に削除しますか？');" style="padding: 0 20px;">
+            <button type="submit" class="submit-btn" style="background-color: #ff3b30; margin-top: 12px; color: white;">このライブを削除</button>
+        </form>
+    </div>
+
+    <script>
+        document.getElementById('image-input').addEventListener('change', function(e) {
+            if (e.target.files && e.target.files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('image-preview').src = e.target.result;
+                    document.getElementById('image-preview').style.display = 'block';
+                    document.getElementById('upload-icon').style.display = 'none';
+                }
+                reader.readAsDataURL(e.target.files[0]);
+            }
+        });
+
+        document.querySelectorAll('input[name="live_type"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                const btn = document.getElementById('add-perf-btn');
+                if (e.target.value === 'ワンマン') {
+                    btn.style.display = 'none';
+                } else {
+                    btn.style.display = 'block';
+                }
+            });
+        });
+
+        document.getElementById('add-perf-btn').addEventListener('click', () => {
+            const container = document.getElementById('performances-container');
+            const html = `
+                <div class="performance-group">
+                    <div class="form-group">
+                        <label>アーティスト名 *</label>
+                        <input type="text" name="artist_name[]" required>
+                    </div>
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label>セットリスト (1行に1曲)</label>
+                        <textarea name="setlist[]" rows="4"></textarea>
+                    </div>
+                </div>
+            `;
+            container.insertAdjacentHTML('beforeend', html);
+        });
+    </script>
+</body>
+</html>

@@ -7,29 +7,68 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
 </head>
 <body>
-    <div class="app-container">
+    <div class="app-container" style="padding-top: 80px;">
         <div class="header-new">
-            <a href="/" class="close-btn" style="text-decoration: none;">←</a>
-            <div class="header-title">live detail</div>
-        </div>
-
-        <div class="detail-image-container">
-            {% if history['image_data'] %}
-                <img src="{{ history['image_data'] }}" alt="Live Image">
+            {% if request.args.get('updated') %}
+                <a href="javascript:history.go(-3)" class="close-btn" style="text-decoration: none;">←</a>
+            {% else %}
+                <a href="javascript:history.back()" class="close-btn" style="text-decoration: none;">←</a>
             {% endif %}
+            <div class="header-title">livefolio</div>
+            <a href="/edit/{{ history['id'] }}" class="close-btn" style="text-decoration: none;">
+                <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
+            </a>
         </div>
 
-        <div class="detail-content">
-            <div class="detail-type-tag">{{ history['live_type'] }}</div>
-            <div style="font-size: 14px; color: var(--text-muted); margin-bottom: 8px;">
-                {{ history['concert_date'] }}
+        <div class="detail-centered-container">
+            {% if history['image_data'] %}
+                <img src="{{ history['image_data'] }}" class="detail-hero-image">
+            {% endif %}
+
+            <div class="detail-date">{{ history['formatted_date'] }}</div>
+
+            <div class="detail-main-title">{{ history['card_main_title'] }}</div>
+            <div class="detail-sub-title">{{ history['detail_sub_title'] }}</div>
+
+            <div class="detail-venue">
+                <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-top; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                {{ history['venue_name'] }}
             </div>
-            <div style="font-size: 28px; font-weight: bold; margin-bottom: 8px;">
-                {{ history['artist_name'] }}
-            </div>
-            <div style="font-size: 16px; color: var(--text-muted);">
-                {{ history['event_title'] }}
-            </div>
+
+            {% if history['countdown'] is not none %}
+                <div class="detail-countdown-box">
+                    {% if history['countdown'] == 0 %}
+                        <div class="num" style="font-size: 40px;">TODAY</div>
+                    {% else %}
+                        <div class="num">{{ history['countdown'] }}</div>
+                        <div class="text">DAYS</div>
+                    {% endif %}
+                </div>
+            {% else %}
+                {% if history['performances'] %}
+                    {% for perf in history['performances'] %}
+                        <div class="setlist-block">
+                            {% if history['live_type'] in ['フェス', '対バン'] %}
+                                <div class="setlist-artist">{{ perf['artist'] }}</div>
+                            {% endif %}
+                            
+                            {% if perf['setlist'] %}
+                            <ol class="setlist-grid">
+                                {% for song in perf['setlist'].split('\n') %}
+                                    {% if song.strip() %}
+                                        <li>
+                                            <a href="https://open.spotify.com/search/{{ perf['artist'] }} {{ song.strip() }}" target="_blank" class="spotify-link">
+                                                {{ song.strip() }}
+                                            </a>
+                                        </li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ol>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                {% endif %}
+            {% endif %}
         </div>
     </div>
 </body>

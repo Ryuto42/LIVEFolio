@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>livefolio - stats</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="fixed-top-bar">
+        <div class="top-nav-pill">
+            <a href="/stats?tab=year&y={{ current_year }}" class="{{ 'active' if tab == 'year' else '' }}">year</a>
+            <a href="/stats?tab=total" class="{{ 'active' if tab == 'total' else '' }}">total</a>
+        </div>
+        <a href="/search" class="fixed-search-btn">🔍</a>
+    </div>
+
+    <div class="app-container" style="padding-top: 80px;">
+        {% if tab == 'year' %}
+        <div class="year-selector">
+            {% set current_idx = available_years.index(current_year) if current_year in available_years else 0 %}
+            {% if current_idx < available_years|length - 1 %}
+                <a href="/stats?tab=year&y={{ available_years[current_idx + 1] }}">＜</a>
+            {% else %}
+                <span style="visibility: hidden;">＜</span>
+            {% endif %}
+            
+            <span>{{ current_year }}</span>
+            
+            {% if current_idx > 0 %}
+                <a href="/stats?tab=year&y={{ available_years[current_idx - 1] }}">＞</a>
+            {% else %}
+                <span style="visibility: hidden;">＞</span>
+            {% endif %}
+        </div>
+        {% endif %}
+
+        <div class="stats-grid">
+            <div class="stat-card active" id="card-lives" onclick="showTab('lives')">
+                <div class="stat-card-title">LIVE</div>
+                <div class="stat-card-value">{{ lives|length }}</div>
+            </div>
+            <div class="stat-card" id="card-tracks" onclick="showTab('tracks')">
+                <div class="stat-card-title">tracks</div>
+                <div class="stat-card-value">{{ track_ranking|length }}</div>
+            </div>
+            <div class="stat-card" id="card-venues" onclick="showTab('venues')">
+                <div class="stat-card-title">venues</div>
+                <div class="stat-card-value">{{ venue_ranking|length }}</div>
+            </div>
+            <div class="stat-card" id="card-artists" onclick="showTab('artists')">
+                <div class="stat-card-title">artists</div>
+                <div class="stat-card-value">{{ artist_ranking|length }}</div>
+            </div>
+        </div>
+
+        <div class="section-title" id="list-title">live log</div>
+
+        <div id="lives" class="list-container" style="display: block;">
+            <div class="card-list">
+                {% for history in lives %}
+                <a href="/detail/{{ history['id'] }}" class="card-link">
+                    <div class="card">
+                        <div class="card-image" style="overflow: hidden;">
+                            {% if history['image_data'] %}
+                                <img src="{{ history['image_data'] }}" style="width: 100%; height: 100%; object-fit: cover;">
+                            {% endif %}
+                        </div>
+                        <div class="card-info">
+                            <div class="card-date">{{ history['concert_date'] }}</div>
+                            <div class="card-artist">{{ history['card_main_title'] }}</div>
+                            <div class="card-title">{{ history['card_sub_title'] }}</div>
+                        </div>
+                        <div class="detail-type-tag {{ history['live_type_class'] }}" style="margin: 0; font-size: 10px;">{{ history['live_type'] }}</div>
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div id="tracks" class="list-container">
+            {% for name, count in track_ranking %}
+            <div class="ranking-item">
+                <div class="ranking-name">{{ name }}</div>
+                <div class="ranking-count"><span>{{ count }}</span>times</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="venues" class="list-container">
+            {% for name, count in venue_ranking %}
+            <div class="ranking-item">
+                <div class="ranking-name">{{ name }}</div>
+                <div class="ranking-count"><span>{{ count }}</span>times</div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <div id="artists" class="list-container">
+            {% for name, count in artist_ranking %}
+            <a href="/artist/{{ name }}" class="card-link">
+                <div class="ranking-item">
+                    <div class="ranking-name">{{ name }}</div>
+                    <div class="ranking-count"><span>{{ count }}</span>times <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">＞</span></div>
+                </div>
+            </a>
+            {% endfor %}
+        </div>
+
+        <div class="bottom-nav">
+            <a href="/" class="nav-item">HOME</a>
+            <a href="/stats" class="nav-item active">STATS</a>
+        </div>
+    </div>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.list-container').forEach(el => el.style.display = 'none');
+            document.getElementById(tabId).style.display = 'block';
+
+            document.querySelectorAll('.stat-card').forEach(el => el.classList.remove('active'));
+            document.getElementById('card-' + tabId).classList.add('active');
+
+            const titleMap = {
+                'lives': 'live log',
+                'tracks': 'tracks ranking',
+                'venues': 'venues ranking',
+                'artists': 'artists ranking'
+            };
+            document.getElementById('list-title').innerText = titleMap[tabId];
+        }
+    </script>
+</body>
+</html>

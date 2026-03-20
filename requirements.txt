@@ -1,7 +1,6 @@
 Flask
-gunicorn
-psycopg2-binary
-gspread
-google-auth
 firebase-admin
 google-cloud-storage
+Pillow
+requests
+python-dotenv
