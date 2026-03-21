@@ -1,100 +1,50 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>livefolio - new</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="app-container" style="padding-top: 80px;">
-        <div class="header-new">
-            <a href="javascript:history.back()" class="close-btn">×</a>
-            <div class="header-title">new live record</div>
-            <div style="width: 40px;"></div>
+{% extends "base.html" %}
+
+{% block top_bar %}
+<div class="fixed-top-bar">
+    <a href="javascript:void(0);" onclick="goBackToList()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">×</a>
+    <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">new live record</div>
+    <div style="width: 40px; position: absolute; right: 20px;"></div>
+</div>
+{% endblock %}
+
+{% block content %}
+    <form action="/add" method="POST" enctype="multipart/form-data">
+        <div style="padding: 0 20px;">
+            <div class="toggle-radio" style="margin-bottom: 24px;">
+                <input type="radio" id="type_oneman" name="live_type" value="ワンマン" checked>
+                <label for="type_oneman">ワンマン</label>
+                <input type="radio" id="type_fes" name="live_type" value="フェス">
+                <label for="type_fes">フェス</label>
+                <input type="radio" id="type_taiban" name="live_type" value="対バン">
+                <label for="type_taiban">対バン</label>
+            </div>
         </div>
 
-        <form action="/add" method="POST" enctype="multipart/form-data">
-            <div style="padding: 0 20px;">
-                <div class="toggle-radio" style="margin-bottom: 24px;">
-                    <input type="radio" id="type_oneman" name="live_type" value="ワンマン" checked>
-                    <label for="type_oneman">ワンマン</label>
-                    <input type="radio" id="type_fes" name="live_type" value="フェス">
-                    <label for="type_fes">フェス</label>
-                    <input type="radio" id="type_taiban" name="live_type" value="対バン">
-                    <label for="type_taiban">対バン</label>
-                </div>
+        <div class="form-container">
+            <div class="form-group" style="margin-bottom: 8px;">
+                <label style="font-size: 14px;">写真 <span style="color: var(--text-muted); font-weight: normal; margin-left: 8px;">会場やチケットの写真を記録しよう</span></label>
+            </div>
+            <label class="image-upload-box">
+                <span id="upload-icon">＋</span>
+                <img id="image-preview" src="" style="display: none;">
+                <input type="file" name="image" accept="image/*" id="image-input">
+            </label>
+
+            <div class="form-group">
+                <label>公演名 *</label>
+                <input type="text" name="event_title" required>
+            </div>
+            <div class="form-group">
+                <label>会場</label>
+                <input type="text" name="venue_name">
+            </div>
+            <div class="form-group">
+                <label>日付 *</label>
+                <input type="date" name="concert_date" max="9999-12-31" required>
             </div>
 
-            <div class="form-container">
-                <div class="form-group" style="margin-bottom: 8px;">
-                    <label style="font-size: 14px;">写真 <span style="color: var(--text-muted); font-weight: normal; margin-left: 8px;">会場やチケットの写真を記録しよう</span></label>
-                </div>
-                <label class="image-upload-box">
-                    <span id="upload-icon">＋</span>
-                    <img id="image-preview" src="" style="display: none;">
-                    <input type="file" name="image" accept="image/*" id="image-input">
-                </label>
-
-                <div class="form-group">
-                    <label>公演名 *</label>
-                    <input type="text" name="event_title" required>
-                </div>
-                <div class="form-group">
-                    <label>会場</label>
-                    <input type="text" name="venue_name">
-                </div>
-                <div class="form-group">
-                    <label>日付 *</label>
-                    <input type="date" name="concert_date" max="9999-12-31" required>
-                </div>
-
-                <div id="performances-container">
-                    <div class="performance-group">
-                        <div class="form-group">
-                            <label>アーティスト名 *</label>
-                            <input type="text" name="artist_name[]" required>
-                        </div>
-                        <div class="form-group" style="margin-bottom: 0;">
-                            <label>セットリスト (1行に1曲)</label>
-                            <textarea name="setlist[]" rows="4"></textarea>
-                        </div>
-                    </div>
-                </div>
-
-                <button type="button" id="add-perf-btn" class="add-perf-btn" style="display: none;">＋ アーティストを追加</button>
-                <button type="submit" class="submit-btn">登録する</button>
-            </div>
-        </form>
-    </div>
-
-    <script>
-        document.getElementById('image-input').addEventListener('change', function(e) {
-            if (e.target.files && e.target.files[0]) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('image-preview').src = e.target.result;
-                    document.getElementById('image-preview').style.display = 'block';
-                    document.getElementById('upload-icon').style.display = 'none';
-                }
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-
-        document.querySelectorAll('input[name="live_type"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const btn = document.getElementById('add-perf-btn');
-                if (e.target.value === 'ワンマン') {
-                    btn.style.display = 'none';
-                } else {
-                    btn.style.display = 'block';
-                }
-            });
-        });
-
-        document.getElementById('add-perf-btn').addEventListener('click', () => {
-            const container = document.getElementById('performances-container');
-            const html = `
+            <div id="performances-container">
                 <div class="performance-group">
                     <div class="form-group">
                         <label>アーティスト名 *</label>
@@ -105,9 +55,12 @@
                         <textarea name="setlist[]" rows="4"></textarea>
                     </div>
                 </div>
-            `;
-            container.insertAdjacentHTML('beforeend', html);
-        });
-    </script>
-</body>
-</html>
+            </div>
+
+            <button type="button" id="add-perf-btn" class="add-perf-btn" style="display: none;">＋ アーティストを追加</button>
+            <button type="submit" class="submit-btn">登録する</button>
+        </div>
+    </form>
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}

@@ -1,48 +1,28 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>livefolio - artist</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="fixed-top-bar">
-        <a href="javascript:history.back()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">←</a>
-        <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">livefolio</div>
-        <div style="width: 40px; position: absolute; right: 20px;"></div>
+{% extends "base.html" %}
+{% from "macros.html" import live_card %}
+
+{% block top_bar %}
+<div class="fixed-top-bar">
+    <a href="javascript:void(0);" onclick="goBackToRootList()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">←</a>
+    <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">livefolio</div>
+    <div style="width: 40px; position: absolute; right: 20px;"></div>
+</div>
+{% endblock %}
+
+{% block content %}
+    <div class="detail-centered-container" style="padding-bottom: 0;">
+        {% if artist_image_url %}
+            <img src="{{ artist_image_url }}" class="detail-hero-image" loading="lazy" onerror="this.style.display='none'">
+        {% endif %}
+        <div class="detail-main-title">{{ artist_name }}</div>
     </div>
 
-    <div class="app-container" style="padding-top: 80px;">
-        <div class="detail-centered-container" style="padding-bottom: 0;">
-            {% if artist_image_url %}
-                <img src="{{ artist_image_url }}" class="detail-hero-image">
-            {% endif %}
-            <div class="detail-main-title">{{ artist_name }}</div>
-        </div>
-
-        <div class="section-title">lives</div>
-        <div class="card-list">
-            {% for history in lives %}
-            <a href="/detail/{{ history['id'] }}" class="card-link">
-                <div class="card {{ history['time_class'] }}">
-                    {% if history['time_class'] == 'card-past' %}
-                    <div class="card-image" style="overflow: hidden;">
-                        {% if history['image_data'] %}
-                            <img src="{{ history['image_data'] }}" style="width: 100%; height: 100%; object-fit: cover;">
-                        {% endif %}
-                    </div>
-                    {% endif %}
-                    <div class="card-info">
-                        <div class="card-date">{{ history['concert_date'] }}</div>
-                        <div class="card-artist">{{ history['card_main_title'] }}</div>
-                        <div class="card-title">{{ history['card_sub_title'] }}</div>
-                    </div>
-                    <div class="detail-type-tag {{ history['live_type_class'] }}" style="margin: 0; font-size: 10px;">{{ history['live_type'] }}</div>
-                </div>
-            </a>
-            {% endfor %}
-        </div>
+    <div class="section-title">lives</div>
+    <div class="card-list">
+        {% for history in lives %}
+            {{ live_card(history) }}
+        {% endfor %}
     </div>
-</body>
-</html>
+{% endblock %}
+
+{% block bottom_nav %}{% endblock %}

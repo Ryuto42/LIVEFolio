@@ -1,91 +1,56 @@
-<!DOCTYPE html>
-<html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>livefolio - search</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
-</head>
-<body>
-    <div class="fixed-top-bar">
-        <a href="javascript:history.back()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">←</a>
-        <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">search</div>
-        <div style="width: 40px; position: absolute; right: 20px;"></div>
-    </div>
+{% extends "base.html" %}
+{% from "macros.html" import live_card, artist_tile %}
 
-    <div class="app-container" style="padding-top: 80px;">
-        <div class="form-container">
-            <form action="/search" method="GET" style="margin-bottom: 24px;">
-                <div class="form-group">
-                    <input type="text" name="q" value="{{ q }}" placeholder="アーティスト名、ライブ名、会場で検索..." required>
-                </div>
-                <button type="submit" class="submit-btn" style="margin-top: 0;">検索</button>
-            </form>
+{% block top_bar %}
+<div class="fixed-top-bar">
+    <a href="javascript:void(0);" onclick="goBackToRootList()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">←</a>
+    <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">search</div>
+    <div style="width: 40px; position: absolute; right: 20px;"></div>
+</div>
+{% endblock %}
 
-            <div style="display: flex; gap: 12px; margin-bottom: 8px;">
-                <a href="/export_csv" class="submit-btn" style="flex: 1; text-align: center; text-decoration: none; margin-top: 0; background-color: var(--bg-card); color: var(--text-main); border: 1px solid #333; font-size: 14px; padding: 12px;">データのエクスポート</a>
-                <button type="button" class="submit-btn" style="flex: 1; margin-top: 0; background-color: var(--bg-card); color: var(--text-main); border: 1px solid #333; font-size: 14px; padding: 12px;" onclick="document.getElementById('csv-import-input').click()">CSVをインポート</button>
+{% block content %}
+    <div class="form-container">
+        <form action="/search" method="GET" style="margin-bottom: 24px;">
+            <div class="form-group">
+                <input type="text" name="q" value="{{ q }}" placeholder="アーティスト名、ライブ名、会場で検索..." required>
             </div>
-            
-            <div style="font-size: 10px; color: var(--text-muted); text-align: center; margin-bottom: 32px;">
-                ※1行目に「concert_date, artist_name, event_title, venue_name, live_type, image_url, performances_json」のヘッダーを含めてください
-            </div>
+            <button type="submit" class="submit-btn" style="margin-top: 0;">検索</button>
+        </form>
 
-            <form id="csv-import-form" action="/import_csv" method="POST" enctype="multipart/form-data" style="display: none;">
-                <input type="file" id="csv-import-input" name="csv_file" accept=".csv" onchange="if(this.value) { document.getElementById('csv-import-form').submit(); }">
-            </form>
+        <div style="display: flex; gap: 12px; margin-bottom: 8px;">
+            <a href="/export_csv" class="submit-btn" style="flex: 1; text-align: center; text-decoration: none; margin-top: 0; background-color: var(--bg-card); color: var(--text-main); border: 1px solid #333; font-size: 14px; padding: 12px;">データのエクスポート</a>
+            <button type="button" class="submit-btn" style="flex: 1; margin-top: 0; background-color: var(--bg-card); color: var(--text-main); border: 1px solid #333; font-size: 14px; padding: 12px;" onclick="document.getElementById('csv-import-input').click()">CSVをインポート</button>
+        </div>
+        
+        <div style="font-size: 10px; color: var(--text-muted); text-align: center; margin-bottom: 32px;">
+            ※1行目に「concert_date, artist_name, event_title, venue_name, live_type, image_url, performances_json」のヘッダーを含めてください
         </div>
 
-        <div class="card-list" style="margin-top: 24px;">
-            {% if artist_results %}
-                <div class="section-title" style="margin-top: 0; padding: 0;">Artists</div>
-                <div class="artist-grid" style="padding: 0; margin-bottom: 32px;">
-                    {% for artist in artist_results %}
-                    <a href="/artist/{{ artist.name }}" class="artist-tile">
-                        <div class="artist-tile-image">
-                            {% if artist.image_url %}
-                                <img src="{{ artist.image_url }}">
-                            {% endif %}
-                        </div>
-                        <div class="artist-tile-name">{{ artist.name }}</div>
-                        <div class="artist-tile-meta">{{ artist.latest_date }} • {{ artist.count }} Live</div>
-                    </a>
-                    {% endfor %}
-                </div>
-            {% endif %}
+        <form id="csv-import-form" action="/import_csv" method="POST" enctype="multipart/form-data" style="display: none;">
+            <input type="file" id="csv-import-input" name="csv_file" accept=".csv" onchange="if(this.value) { document.getElementById('csv-import-form').submit(); }">
+        </form>
+    </div>
 
-            {% if results %}
-                <div class="section-title" style="padding: 0;">Lives</div>
-                {% for history in results %}
-                <a href="/detail/{{ history['id'] }}" class="card-link">
-                    <div class="card {{ history['time_class'] }}">
-                        {% if history['time_class'] == 'card-past' %}
-                        <div class="card-image" style="overflow: hidden;">
-                            {% if history['image_data'] %}
-                                <img src="{{ history['image_data'] }}" style="width: 100%; height: 100%; object-fit: cover;">
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                        <div class="card-info">
-                            <div class="card-date">{{ history['concert_date'] }}</div>
-                            <div class="card-artist">{{ history['card_main_title'] }}</div>
-                            <div class="card-title">{{ history['card_sub_title'] }}</div>
-                        </div>
-                        <div class="detail-type-tag {{ history['live_type_class'] }}" style="margin: 0; font-size: 10px;">{{ history['live_type'] }}</div>
-                    </div>
-                </a>
+    <div class="card-list" style="margin-top: 24px;">
+        {% if artist_results %}
+            <div class="section-title" style="margin-top: 0; padding: 0;">Artists</div>
+            <div class="artist-grid" style="padding: 0; margin-bottom: 32px;">
+                {% for artist in artist_results %}
+                    {{ artist_tile(artist) }}
                 {% endfor %}
-            {% endif %}
+            </div>
+        {% endif %}
 
-            {% if q and not results and not artist_results %}
-                <div style="text-align: center; color: var(--text-muted); margin-top: 40px;">一致する結果が見つかりません。</div>
-            {% endif %}
-        </div>
+        {% if results %}
+            <div class="section-title" style="padding: 0;">Lives</div>
+            {% for history in results %}
+                {{ live_card(history) }}
+            {% endfor %}
+        {% endif %}
 
-        <div class="bottom-nav">
-            <a href="/" class="nav-item">HOME</a>
-            <a href="/stats" class="nav-item">STATS</a>
-        </div>
+        {% if q and not results and not artist_results %}
+            <div style="text-align: center; color: var(--text-muted); margin-top: 40px;">一致する結果が見つかりません。</div>
+        {% endif %}
     </div>
-</body>
-</html>
+{% endblock %}
