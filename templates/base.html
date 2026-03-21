@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LIVEFolio</title>
+    
+    <link rel="icon" href="{{ url_for('static', filename='icon.png') }}">
+    <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon.png') }}">
+    
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+</head>
+<body>
+    {% block top_bar %}{% endblock %}
+
+    <div class="app-container">
+        {% block content %}{% endblock %}
+        
+        {% block bottom_nav %}
+        <div class="bottom-nav">
+            {% if active_nav == 'home' or active_nav == 'stats' %}
+            <div class="nav-highlight {% if active_nav == 'stats' %}right{% else %}left{% endif %}"></div>
+            {% endif %}
+            
+            <a href="/" class="nav-item {% if active_nav == 'home' %}active{% endif %}" style="view-transition-name: nav-home;">HOME</a>
+            <a href="/stats" class="nav-item {% if active_nav == 'stats' %}active{% endif %}" style="view-transition-name: nav-stats;">STATS</a>
+        </div>
+        {% endblock %}
+    </div>
+
+    <script src="{{ url_for('static', filename='main.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
