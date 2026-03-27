@@ -42,9 +42,6 @@
         <div style="font-size: 10px; color: var(--text-muted); text-align: center; margin-bottom: 32px;">
             編集するためにはログインが必要です
         </div>
-        <form id="token-form" action="/login" method="POST" style="display: none;">
-            <input type="hidden" id="id_token" name="id_token">
-        </form>
         {% endif %}
     </div>
 
@@ -98,12 +95,24 @@
                     return result.user.getIdToken();
                 })
                 .then((idToken) => {
-                    document.getElementById("id_token").value = idToken;
-                    document.getElementById("token-form").submit();
+                    return fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: 'id_token=' + encodeURIComponent(idToken)
+                    });
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        alert("許可されたユーザーのみ編集することができます");
+                        auth.signOut();
+                    }
                 })
                 .catch((error) => {
-                    console.error("Login Error:", error);
-                    alert("ログインがキャンセルされたか、失敗しました。");
                 });
         });
     }
