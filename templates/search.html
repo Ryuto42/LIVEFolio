@@ -74,7 +74,7 @@
 {% block scripts %}
 {% if not is_logged_in %}
 <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
+    import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 
     const firebaseConfig = {
@@ -83,13 +83,16 @@
         projectId: "{{ firebase_config.projectId }}"
     };
 
-    const app = initializeApp(firebaseConfig);
+    const app = !getApps().length ? initializeApp(firebaseConfig) : getApp();
     const auth = getAuth(app);
     const provider = new GoogleAuthProvider();
 
     const loginBtn = document.getElementById("google-login-btn");
     if (loginBtn) {
-        loginBtn.addEventListener("click", () => {
+        const newBtn = loginBtn.cloneNode(true);
+        loginBtn.parentNode.replaceChild(newBtn, loginBtn);
+        
+        newBtn.addEventListener("click", () => {
             signInWithPopup(auth, provider)
                 .then((result) => {
                     return result.user.getIdToken();
@@ -99,7 +102,8 @@
                     document.getElementById("token-form").submit();
                 })
                 .catch((error) => {
-                    console.error(error);
+                    console.error("Login Error:", error);
+                    alert("ログインがキャンセルされたか、失敗しました。");
                 });
         });
     }
