@@ -64,15 +64,35 @@
 
     <div id="tracks" class="list-container">
         {% for t in track_ranking %}
-        <a href="https://open.spotify.com/search/{{ t.artist | urlencode }} {{ t.song | urlencode }}" target="_blank" class="spotify-link" style="display: block; text-decoration: none; color: inherit;">
-            <div class="ranking-item">
-                <div class="ranking-name">
-                    {{ t.song }}
-                    <span style="font-size: 11px; color: var(--text-muted); margin-left: 8px; font-weight: normal;">{{ t.artist }}</span>
+        <div class="accordion-item" data-accordion-id="track-{{ loop.index }}">
+            <div class="ranking-item accordion-header" onclick="toggleAccordion(this)">
+                <div class="ranking-name" style="flex: 1;">
+                    <div style="display: flex; align-items: center;">
+                        <a href="https://open.spotify.com/search/{{ t.artist | urlencode }} {{ t.song | urlencode }}" target="_blank" onclick="event.stopPropagation();" style="display: flex; align-items: center;">
+                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; color: #1DB954;"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.973c2.5-1.473 5.5-.973 7.5.527M9 15c1.5-1 4-1 5 .5M7 9c3-2 6-2 9 0"></path></svg>
+                        </a>
+                        <span style="font-size: 14px;">{{ t.song }}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; margin-left: 24px;">{{ t.artist }}</div>
                 </div>
-                <div class="ranking-count"><span>{{ t.count }}</span>times</div>
+                <div class="ranking-count">
+                    <span>{{ t.count }}</span>times 
+                    <svg class="accordion-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+                </div>
             </div>
-        </a>
+            <div class="accordion-wrapper">
+                <div class="accordion-content">
+                    <div class="accordion-inner">
+                        {% for live in t.lives %}
+                        <a href="/detail/{{ live.id }}" class="accordion-live-link">
+                            <span style="font-size: 10px; color: var(--text-muted); margin-right: 8px;">{{ live.date }}</span>
+                            <span style="font-size: 12px; color: var(--text-main);">{{ live.title }}</span>
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
         {% endfor %}
     </div>
 
