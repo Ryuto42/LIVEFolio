@@ -11,11 +11,14 @@
 
 {% block content %}
     <div class="form-container">
-        <form action="/search" method="GET" style="margin-bottom: 24px;">
+        <form action="/search" method="GET" style="margin-bottom: 12px;">
             <div class="form-group">
                 <input type="text" name="q" value="{{ q }}" placeholder="アーティスト名、ライブ名、会場で検索..." required>
             </div>
             <button type="submit" class="submit-btn" style="margin-top: 0;">検索</button>
+        </form>
+        <form action="/clear_cache_api" method="POST" style="margin-bottom: 24px;">
+            <button type="submit" class="submit-btn" style="margin-top: 0; background-color: rgba(30, 30, 32, 0.4); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); color: var(--text-main); border: 1px solid rgba(255, 255, 255, 0.08);">キャッシュクリア</button>
         </form>
 
         {% if is_logged_in %}
