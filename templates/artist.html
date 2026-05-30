@@ -3,16 +3,16 @@
 
 {% block top_bar %}
 <div class="fixed-top-bar">
-    <a href="javascript:void(0);" onclick="goBackToRootList()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">←</a>
-    <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">livefolio</div>
-    <div style="width: 40px; position: absolute; right: 20px;"></div>
+    <a href="/" data-action="back-root" class="close-btn top-bar-left">←</a>
+    <div class="top-bar-title">livefolio</div>
+    <div class="top-bar-spacer"></div>
 </div>
 {% endblock %}
 
 {% block content %}
-    <div class="detail-centered-container" style="padding-bottom: 0;">
+    <div class="detail-centered-container detail-centered-compact">
         {% if artist_image_url %}
-            <img src="{{ artist_image_url }}" class="detail-hero-image" loading="lazy" onerror="this.style.display='none'">
+            <img src="{{ artist_image_url }}" class="detail-hero-image" loading="lazy" decoding="async" onerror="this.hidden=true">
         {% endif %}
         <div class="detail-main-title">{{ artist_name }}</div>
     </div>

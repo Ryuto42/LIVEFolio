@@ -24,8 +24,8 @@
             <div class="nav-highlight {% if active_nav == 'stats' %}right{% else %}left{% endif %}"></div>
             {% endif %}
             
-            <a href="/" class="nav-item {% if active_nav == 'home' %}active{% endif %}" style="view-transition-name: nav-home;">HOME</a>
-            <a href="/stats" class="nav-item {% if active_nav == 'stats' %}active{% endif %}" style="view-transition-name: nav-stats;">STATS</a>
+            <a href="/" class="nav-item nav-home {% if active_nav == 'home' %}active{% endif %}">HOME</a>
+            <a href="/stats" class="nav-item nav-stats {% if active_nav == 'stats' %}active{% endif %}">STATS</a>
         </div>
         {% endblock %}
     </div>

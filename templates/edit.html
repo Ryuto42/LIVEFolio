@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block top_bar %}
-<div class="header-new" style="position: absolute; top: 0; width: 100%; box-sizing: border-box; padding: 20px; z-index: 10;">
-    <a href="javascript:void(0);" onclick="navigate('/detail/{{ history.id }}')" class="close-btn" style="text-decoration: none;">×</a>
+<div class="header-new header-edit">
+    <a href="/detail/{{ history.id }}" class="close-btn">×</a>
     <div class="header-title">edit record</div>
-    <div style="width: 40px;"></div>
+    <div class="header-spacer"></div>
 </div>
 {% endblock %}
 
@@ -12,8 +12,8 @@
     <form action="/update/{{ history['id'] }}" method="POST" enctype="multipart/form-data">
         <input type="hidden" name="old_image_data" value="{{ history['image_data'] }}">
         
-        <div style="padding: 0 20px;">
-            <div class="toggle-radio" style="margin-bottom: 24px;">
+        <div class="form-shell">
+            <div class="toggle-radio form-toggle">
                 <input type="radio" id="type_oneman" name="live_type" value="ワンマン" {% if history['live_type'] == 'ワンマン' %}checked{% endif %}>
                 <label for="type_oneman">ワンマン</label>
                 <input type="radio" id="type_fes" name="live_type" value="フェス" {% if history['live_type'] == 'フェス' %}checked{% endif %}>
@@ -24,12 +24,12 @@
         </div>
 
         <div class="form-container">
-            <div class="form-group" style="margin-bottom: 8px;">
-                <label style="font-size: 14px;">写真 <span style="color: var(--text-muted); font-weight: normal; margin-left: 8px;">会場やチケットの写真を記録しよう</span></label>
+            <div class="form-group form-group-tight">
+                <label class="form-label-lg">写真 <span class="label-note">会場やチケットの写真を記録しよう</span></label>
             </div>
             <label class="image-upload-box">
-                <span id="upload-icon" style="display: {% if history['image_data'] %}none{% else %}block{% endif %};">＋</span>
-                <img id="image-preview" src="{{ history['image_data'] }}" style="display: {% if history['image_data'] %}block{% else %}none{% endif %};">
+                <span id="upload-icon" {% if history['image_data'] %}hidden{% endif %}>＋</span>
+                <img id="image-preview" src="{{ history['image_data'] }}" {% if not history['image_data'] %}hidden{% endif %}>
                 <input type="file" name="image" accept="image/*" id="image-input">
             </label>
 
@@ -54,7 +54,7 @@
                             <label>アーティスト名 *</label>
                             <input type="text" name="artist_name[]" value="{{ perf['artist'] }}" required>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
+                        <div class="form-group form-group-compact">
                             <label>セットリスト (1行に1曲)</label>
                             <textarea name="setlist[]" rows="4">{{ perf['setlist'] }}</textarea>
                         </div>
@@ -66,7 +66,7 @@
                             <label>アーティスト名 *</label>
                             <input type="text" name="artist_name[]" value="{{ history['artist_name'] }}" required>
                         </div>
-                        <div class="form-group" style="margin-bottom: 0;">
+                        <div class="form-group form-group-compact">
                             <label>セットリスト (1行に1曲)</label>
                             <textarea name="setlist[]" rows="4"></textarea>
                         </div>
@@ -74,13 +74,13 @@
                 {% endif %}
             </div>
 
-            <button type="button" id="add-perf-btn" class="add-perf-btn" style="display: {% if history['live_type'] == 'ワンマン' %}none{% else %}block{% endif %};">＋ アーティストを追加</button>
+            <button type="button" id="add-perf-btn" class="add-perf-btn" {% if history['live_type'] == 'ワンマン' %}hidden{% endif %}>＋ アーティストを追加</button>
             <button type="submit" class="submit-btn">保存する</button>
         </div>
     </form>
 
-    <form action="/delete/{{ history['id'] }}" method="POST" onsubmit="return confirm('本当に削除しますか？');" style="padding: 0 20px;">
-        <button type="submit" class="submit-btn" style="background-color: #ff3b30; margin-top: 12px; color: white;">このライブを削除</button>
+    <form action="/delete/{{ history['id'] }}" method="POST" class="form-shell delete-form" data-confirm="本当に削除しますか？">
+        <button type="submit" class="submit-btn submit-btn-danger">このライブを削除</button>
     </form>
 {% endblock %}
 

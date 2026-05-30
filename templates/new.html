@@ -2,16 +2,16 @@
 
 {% block top_bar %}
 <div class="fixed-top-bar">
-    <a href="javascript:void(0);" onclick="goBackToList()" class="close-btn" style="text-decoration: none; position: absolute; left: 20px;">×</a>
-    <div style="flex: 1; text-align: center; font-size: 18px; font-weight: bold; color: var(--text-main);">new live record</div>
-    <div style="width: 40px; position: absolute; right: 20px;"></div>
+    <a href="/" data-action="back-list" class="close-btn top-bar-left">×</a>
+    <div class="top-bar-title">new live record</div>
+    <div class="top-bar-spacer"></div>
 </div>
 {% endblock %}
 
 {% block content %}
     <form action="/add" method="POST" enctype="multipart/form-data">
-        <div style="padding: 0 20px;">
-            <div class="toggle-radio" style="margin-bottom: 24px;">
+        <div class="form-shell">
+            <div class="toggle-radio form-toggle">
                 <input type="radio" id="type_oneman" name="live_type" value="ワンマン" checked>
                 <label for="type_oneman">ワンマン</label>
                 <input type="radio" id="type_fes" name="live_type" value="フェス">
@@ -22,12 +22,12 @@
         </div>
 
         <div class="form-container">
-            <div class="form-group" style="margin-bottom: 8px;">
-                <label style="font-size: 14px;">写真 <span style="color: var(--text-muted); font-weight: normal; margin-left: 8px;">会場やチケットの写真を記録しよう</span></label>
+            <div class="form-group form-group-tight">
+                <label class="form-label-lg">写真 <span class="label-note">会場やチケットの写真を記録しよう</span></label>
             </div>
             <label class="image-upload-box">
                 <span id="upload-icon">＋</span>
-                <img id="image-preview" src="" style="display: none;">
+                <img id="image-preview" src="" hidden>
                 <input type="file" name="image" accept="image/*" id="image-input">
             </label>
 
@@ -50,14 +50,14 @@
                         <label>アーティスト名 *</label>
                         <input type="text" name="artist_name[]" required>
                     </div>
-                    <div class="form-group" style="margin-bottom: 0;">
+                    <div class="form-group form-group-compact">
                         <label>セットリスト (1行に1曲)</label>
                         <textarea name="setlist[]" rows="4"></textarea>
                     </div>
                 </div>
             </div>
 
-            <button type="button" id="add-perf-btn" class="add-perf-btn" style="display: none;">＋ アーティストを追加</button>
+            <button type="button" id="add-perf-btn" class="add-perf-btn" hidden>＋ アーティストを追加</button>
             <button type="submit" class="submit-btn">登録する</button>
         </div>
     </form>

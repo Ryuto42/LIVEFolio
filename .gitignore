@@ -1,3 +1,8 @@
 firebase_credentials.json
 .env
 *_cache.json
+.vercel
+__pycache__/
+*.pyc
+public/static/
+venv/

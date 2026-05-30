@@ -6,8 +6,8 @@
 <div class="fixed-top-bar">
     <div class="top-nav-pill">
         <div class="pill-highlight {% if tab == 'artist' %}right{% else %}left{% endif %}"></div>
-        <a href="/?tab=year" class="{{ 'active' if tab == 'year' else '' }}" style="view-transition-name: nav-idx-year;">year</a>
-        <a href="/?tab=artist" class="{{ 'active' if tab == 'artist' else '' }}" style="view-transition-name: nav-idx-artist;">artist</a>
+        <a href="/?tab=year" class="nav-idx-year {{ 'active' if tab == 'year' else '' }}">year</a>
+        <a href="/?tab=artist" class="nav-idx-artist {{ 'active' if tab == 'artist' else '' }}">artist</a>
     </div>
     <a href="/search" class="fixed-search-btn">🔍</a>
 </div>
@@ -20,15 +20,15 @@
             <div class="next-live-content">
                 <div class="next-live-label">NEXT LIVE</div>
                 <div class="next-live-title">{{ next_live['card_main_title'] }}</div>
-                <div class="card-title" style="margin-top: 8px;">{{ next_live['card_sub_title'] }}</div>
-                <div class="card-title" style="margin-top: 4px;">
-                    <svg viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-top; margin-right: 2px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> {{ next_live['venue_name'] }}
+                <div class="card-title next-live-subtitle">{{ next_live['card_sub_title'] }}</div>
+                <div class="card-title next-live-venue">
+                    <svg class="inline-icon" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> {{ next_live['venue_name'] }}
                 </div>
             </div>
             <div class="next-live-countdown-container">
-                <div class="card-title" style="margin-top: 0; margin-bottom: 4px;">{{ next_live['concert_date'] }}</div>
+                <div class="card-title next-live-date">{{ next_live['concert_date'] }}</div>
                 {% if next_live['days_left'] == 0 %}
-                    <div class="next-live-countdown-num" style="font-size: 32px; margin-top: 8px;">TODAY</div>
+                    <div class="next-live-countdown-num next-live-today">TODAY</div>
                 {% else %}
                     <div class="next-live-countdown-num">{{ next_live['days_left'] }}</div>
                     <div class="next-live-countdown-text">DAYS</div>
@@ -54,9 +54,9 @@
         </div>
 
     {% elif tab == 'artist' %}
-        <div class="section-title" style="margin-top: 0; display: flex; justify-content: space-between;">
+        <div class="section-title section-title-row section-title-flush">
             <span>{{ artists|length }} artists</span>
-            <span style="font-size: 12px; color: var(--text-muted); font-weight: normal;">most seen ↓</span>
+            <span class="section-title-meta">most seen ↓</span>
         </div>
         <div class="artist-grid">
             {% for artist in artists %}

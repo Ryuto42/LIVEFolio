@@ -6,8 +6,8 @@
 <div class="fixed-top-bar">
     <div class="top-nav-pill">
         <div class="pill-highlight {% if tab == 'total' %}right{% else %}left{% endif %}"></div>
-        <a href="/stats?tab=year&y={{ current_year }}" class="{{ 'active' if tab == 'year' else '' }}" style="view-transition-name: nav-st-year;">year</a>
-        <a href="/stats?tab=total" class="{{ 'active' if tab == 'total' else '' }}" style="view-transition-name: nav-st-total;">total</a>
+        <a href="/stats?tab=year&y={{ current_year }}" class="nav-st-year {{ 'active' if tab == 'year' else '' }}">year</a>
+        <a href="/stats?tab=total" class="nav-st-total {{ 'active' if tab == 'total' else '' }}">total</a>
     </div>
     <a href="/search" class="fixed-search-btn">🔍</a>
 </div>
@@ -20,7 +20,7 @@
         {% if current_idx < available_years|length - 1 %}
             <a href="/stats?tab=year&y={{ available_years[current_idx + 1] }}">＜</a>
         {% else %}
-            <span style="visibility: hidden;">＜</span>
+            <span class="year-selector-placeholder">＜</span>
         {% endif %}
         
         <span>{{ current_year }}</span>
@@ -28,33 +28,33 @@
         {% if current_idx > 0 %}
             <a href="/stats?tab=year&y={{ available_years[current_idx - 1] }}">＞</a>
         {% else %}
-            <span style="visibility: hidden;">＞</span>
+            <span class="year-selector-placeholder">＞</span>
         {% endif %}
     </div>
     {% endif %}
 
     <div class="stats-grid">
-        <div class="stat-card active" id="card-lives" onclick="showTab('lives')">
+        <button type="button" class="stat-card active" id="card-lives" data-action="stats-tab" data-tab-target="lives">
             <div class="stat-card-title">LIVE</div>
             <div class="stat-card-value">{{ lives|length }}</div>
-        </div>
-        <div class="stat-card" id="card-tracks" onclick="showTab('tracks')">
+        </button>
+        <button type="button" class="stat-card" id="card-tracks" data-action="stats-tab" data-tab-target="tracks">
             <div class="stat-card-title">tracks</div>
             <div class="stat-card-value">{{ track_ranking|length }}</div>
-        </div>
-        <div class="stat-card" id="card-venues" onclick="showTab('venues')">
+        </button>
+        <button type="button" class="stat-card" id="card-venues" data-action="stats-tab" data-tab-target="venues">
             <div class="stat-card-title">venues</div>
             <div class="stat-card-value">{{ venue_ranking|length }}</div>
-        </div>
-        <div class="stat-card" id="card-artists" onclick="showTab('artists')">
+        </button>
+        <button type="button" class="stat-card" id="card-artists" data-action="stats-tab" data-tab-target="artists">
             <div class="stat-card-title">artists</div>
             <div class="stat-card-value">{{ artist_ranking|length }}</div>
-        </div>
+        </button>
     </div>
 
     <div class="section-title" id="list-title">live log</div>
 
-    <div id="lives" class="list-container" style="display: block;">
+    <div id="lives" class="list-container">
         <div class="card-list">
             {% for history in lives %}
                 {{ live_card(history) }}
@@ -62,18 +62,18 @@
         </div>
     </div>
 
-    <div id="tracks" class="list-container">
+    <div id="tracks" class="list-container" hidden>
         {% for t in track_ranking %}
         <div class="accordion-item" data-accordion-id="track-{{ loop.index }}">
-            <div class="ranking-item accordion-header" onclick="toggleAccordion(this)">
-                <div class="ranking-name" style="flex: 1;">
-                    <div style="display: flex; align-items: center;">
-                        <a href="https://open.spotify.com/search/{{ t.artist | urlencode }} {{ t.song | urlencode }}" target="_blank" onclick="event.stopPropagation();" style="display: flex; align-items: center;">
-                            <svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; color: #1DB954;"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.973c2.5-1.473 5.5-.973 7.5.527M9 15c1.5-1 4-1 5 .5M7 9c3-2 6-2 9 0"></path></svg>
+            <div class="ranking-item accordion-header" data-action="accordion-toggle">
+                <div class="ranking-name ranking-name-main">
+                    <div class="ranking-track-line">
+                        <a href="https://open.spotify.com/search/{{ t.artist | urlencode }} {{ t.song | urlencode }}" target="_blank" class="ranking-spotify-link">
+                            <svg class="spotify-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.973c2.5-1.473 5.5-.973 7.5.527M9 15c1.5-1 4-1 5 .5M7 9c3-2 6-2 9 0"></path></svg>
                         </a>
-                        <span style="font-size: 14px;">{{ t.song }}</span>
+                        <span class="ranking-track-title">{{ t.song }}</span>
                     </div>
-                    <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; margin-left: 24px;">{{ t.artist }}</div>
+                    <div class="ranking-track-artist">{{ t.artist }}</div>
                 </div>
                 <div class="ranking-count">
                     <span>{{ t.count }}</span>times 
@@ -85,8 +85,8 @@
                     <div class="accordion-inner">
                         {% for live in t.lives %}
                         <a href="/detail/{{ live.id }}" class="accordion-live-link">
-                            <span style="font-size: 10px; color: var(--text-muted); margin-right: 8px;">{{ live.date }}</span>
-                            <span style="font-size: 12px; color: var(--text-main);">{{ live.title }}</span>
+                            <span class="accordion-live-date">{{ live.date }}</span>
+                            <span class="accordion-live-title">{{ live.title }}</span>
                         </a>
                         {% endfor %}
                     </div>
@@ -96,7 +96,7 @@
         {% endfor %}
     </div>
 
-    <div id="venues" class="list-container">
+    <div id="venues" class="list-container" hidden>
         {% for name, count in venue_ranking %}
         <div class="ranking-item">
             <div class="ranking-name">{{ name }}</div>
@@ -105,12 +105,12 @@
         {% endfor %}
     </div>
 
-    <div id="artists" class="list-container">
+    <div id="artists" class="list-container" hidden>
         {% for name, count in artist_ranking %}
         <a href="/artist/{{ name }}" class="card-link">
             <div class="ranking-item">
                 <div class="ranking-name">{{ name }}</div>
-                <div class="ranking-count"><span>{{ count }}</span>times <span style="font-size: 12px; color: var(--text-muted); margin-left: 8px;">＞</span></div>
+                <div class="ranking-count"><span>{{ count }}</span>times <span class="ranking-chevron">＞</span></div>
             </div>
         </a>
         {% endfor %}

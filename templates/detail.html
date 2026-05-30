@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 
 {% block top_bar %}
-<div class="header-new" style="position: fixed; top: 0; left: 50%; transform: translateX(-50%); width: 100%; max-width: 430px; box-sizing: border-box; padding: 20px; z-index: 1000; background: linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0) 100%); pointer-events: none;">
-    <a href="javascript:void(0);" onclick="goBackToList()" class="close-btn" style="text-decoration: none; pointer-events: auto;">←</a>
-    <div class="header-title" style="pointer-events: auto;">livefolio</div>
-    <a href="/edit/{{ history['id'] }}" class="close-btn" style="text-decoration: none; pointer-events: auto;">
+<div class="header-new header-detail">
+    <a href="/" data-action="back-list" class="close-btn">←</a>
+    <div class="header-title">livefolio</div>
+    <a href="/edit/{{ history['id'] }}" class="close-btn">
         <svg viewBox="0 0 24 24" width="20" height="20" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"></circle><circle cx="19" cy="12" r="1"></circle><circle cx="5" cy="12" r="1"></circle></svg>
     </a>
 </div>
@@ -13,7 +13,7 @@
 {% block content %}
     <div class="detail-centered-container">
         {% if history['image_data'] %}
-            <img src="{{ history['image_data'] }}" class="detail-hero-image">
+            <img src="{{ history['image_data'] }}" class="detail-hero-image" decoding="async" fetchpriority="high">
         {% endif %}
 
         <div class="detail-date">{{ history['formatted_date'] }}</div>
@@ -22,14 +22,14 @@
         <div class="detail-sub-title">{{ history['detail_sub_title'] }}</div>
 
         <div class="detail-venue">
-            <svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: text-top; margin-right: 4px;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            <svg class="inline-icon" viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
             {{ history['venue_name'] }}
         </div>
 
         {% if history['countdown'] is not none %}
             <div class="detail-countdown-box">
                 {% if history['countdown'] == 0 %}
-                    <div class="num" style="font-size: 40px;">TODAY</div>
+                    <div class="num detail-today">TODAY</div>
                 {% else %}
                     <div class="num">{{ history['countdown'] }}</div>
                     <div class="text">DAYS</div>
