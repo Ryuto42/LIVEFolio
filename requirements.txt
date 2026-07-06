@@ -1,6 +1,0 @@
-Flask
-firebase-admin
-google-cloud-storage
-Pillow
-requests
-python-dotenv
