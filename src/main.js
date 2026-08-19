@@ -25,6 +25,16 @@ import { renderStats } from './pages/Stats.js';
 import { renderSearch } from './pages/Search.js';
 import { renderArtist } from './pages/Artist.js';
 
+let lastBottomNavTab = null;
+
+function triggerCapsuleMorph(track) {
+    const capsule = track && track.querySelector('.liquid-capsule');
+    if (!capsule) return;
+    capsule.classList.remove('is-morphing');
+    void capsule.offsetWidth;
+    capsule.classList.add('is-morphing');
+}
+
 App.addListener('backButton', ({ canGoBack }) => {
     if (canGoBack) {
         window.history.back();
@@ -60,8 +70,10 @@ async function router(isPopState = false) {
 
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const navHighlight = document.getElementById('nav-highlight');
-    
+    let bottomNavTab = null;
+
     if (path === '/' || path === '/index.html') {
+        bottomNavTab = 'home';
         document.querySelector('.nav-home')?.classList.add('active');
         if (navHighlight) {
             navHighlight.classList.remove('right');
@@ -71,6 +83,7 @@ async function router(isPopState = false) {
         const tab = urlParams.get('tab') || 'year';
         await renderHome(appContent, tab);
     } else if (path.startsWith('/stats')) {
+        bottomNavTab = 'stats';
         document.querySelector('.nav-stats')?.classList.add('active');
         if (navHighlight) {
             navHighlight.classList.remove('left');
@@ -102,13 +115,14 @@ async function router(isPopState = false) {
     }
 
 
-    const bottomNav = document.querySelector('.bottom-nav');
+    if (bottomNavTab && lastBottomNavTab && lastBottomNavTab !== bottomNavTab) {
+        triggerCapsuleMorph(navHighlight);
+    }
+    if (bottomNavTab) lastBottomNavTab = bottomNavTab;
+
+    const bottomNav = document.querySelector('.liquid-tabbar-wrap');
     if (bottomNav) {
-        if (path === '/' || path === '/index.html' || path.startsWith('/stats')) {
-            bottomNav.style.display = 'flex';
-        } else {
-            bottomNav.style.display = 'none';
-        }
+        bottomNav.style.display = bottomNavTab ? 'flex' : 'none';
     }
 
     const fullPath = window.location.pathname + window.location.search;

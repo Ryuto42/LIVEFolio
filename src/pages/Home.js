@@ -1,6 +1,14 @@
 import { db } from '../db.js';
 import { processLiveData, liveCard, artistTile } from '../utils.js';
 
+function triggerCapsuleMorph(track) {
+    const capsule = track && track.querySelector('.liquid-capsule');
+    if (!capsule) return;
+    capsule.classList.remove('is-morphing');
+    void capsule.offsetWidth;
+    capsule.classList.add('is-morphing');
+}
+
 export async function renderHome(container, tab = 'year') {
     // Re-render when background artist sync completes
     window.addEventListener('artists-updated', () => {
@@ -24,46 +32,42 @@ export async function renderHome(container, tab = 'year') {
     }
 
     const existingPill = topBarContainer.querySelector('.top-nav-pill');
-    
+
     if (existingPill) {
-        const leftLink = existingPill.children[1];
-        const rightLink = existingPill.children[2];
-        
+        const links = existingPill.querySelectorAll('a');
+        const leftLink = links[0];
+        const rightLink = links[1];
+
         leftLink.href = "/?tab=year";
         leftLink.className = `nav-idx-year ${tab === 'year' ? 'active' : ''}`;
         leftLink.textContent = 'year';
-        leftLink.onclick = null;
-        leftLink.removeAttribute('onclick');
 
         rightLink.href = "/?tab=artist";
         rightLink.className = `nav-idx-artist ${tab === 'artist' ? 'active' : ''}`;
         rightLink.textContent = 'artist';
-        rightLink.onclick = null;
-        rightLink.removeAttribute('onclick');
 
-        const pill = topBarContainer.querySelector('.pill-highlight');
-        if (tab === 'artist') {
-            pill.classList.remove('left');
-            pill.classList.add('right');
-        } else {
-            pill.classList.remove('right');
-            pill.classList.add('left');
-        }
-
-        if (!topBarContainer.querySelector('.fab')) {
-            topBarContainer.insertAdjacentHTML('beforeend', `<a href="/new" class="fab">＋</a>`);
+        const track = existingPill.querySelector('.liquid-capsule-track');
+        const wasArtist = track.classList.contains('right');
+        track.classList.toggle('right', tab === 'artist');
+        track.classList.toggle('left', tab !== 'artist');
+        if (wasArtist !== (tab === 'artist')) {
+            triggerCapsuleMorph(track);
         }
     } else {
         topBarContainer.innerHTML = `
             <div class="fixed-top-bar transparent-top-bar">
-                <div class="top-nav-pill">
-                    <div class="pill-highlight ${tab === 'artist' ? 'right' : 'left'}"></div>
+                <div class="top-bar-wash"></div>
+                <div class="liquid-glass top-nav-pill">
+                    <div class="liquid-capsule-track ${tab === 'artist' ? 'right' : 'left'}">
+                        <div class="liquid-capsule"></div>
+                    </div>
                     <a href="/?tab=year" class="nav-idx-year ${tab === 'year' ? 'active' : ''}">year</a>
                     <a href="/?tab=artist" class="nav-idx-artist ${tab === 'artist' ? 'active' : ''}">artist</a>
                 </div>
-                <a href="/search" class="dynamic-search-btn">🔍</a>
+                <a href="/search" class="liquid-glass liquid-glass-control dynamic-search-btn" aria-label="検索">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </a>
             </div>
-            <a href="/new" class="fab">＋</a>
         `;
     }
 

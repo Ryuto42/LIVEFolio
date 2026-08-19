@@ -1,6 +1,14 @@
 import { db } from '../db.js';
 import { liveCard, processLiveData } from '../utils.js';
 
+function triggerCapsuleMorph(track) {
+    const capsule = track && track.querySelector('.liquid-capsule');
+    if (!capsule) return;
+    capsule.classList.remove('is-morphing');
+    void capsule.offsetWidth;
+    capsule.classList.add('is-morphing');
+}
+
 export async function renderStats(container) {
     const urlParams = new URLSearchParams(window.location.search);
     const tab = urlParams.get('tab') || 'total';
@@ -82,8 +90,9 @@ export async function renderStats(container) {
     const topBarContainer = document.getElementById('top-bar-container');
     const existingPill = topBarContainer.querySelector('.top-nav-pill');
     if (existingPill) {
-        const leftLink = existingPill.children[1];
-        const rightLink = existingPill.children[2];
+        const links = existingPill.querySelectorAll('a');
+        const leftLink = links[0];
+        const rightLink = links[1];
 
         leftLink.href = `/stats?tab=year&y=${currentYear}`;
         leftLink.className = `nav-st-year ${tab === 'year' ? 'active' : ''}`;
@@ -95,29 +104,28 @@ export async function renderStats(container) {
         rightLink.textContent = 'total';
         rightLink.setAttribute('onclick', `window.history.pushState({},'','/stats?tab=total'); window.dispatchEvent(new Event('popstate')); return false;`);
 
-        const pill = topBarContainer.querySelector('.pill-highlight');
-        if (tab === 'total') {
-            pill.classList.remove('left');
-            pill.classList.add('right');
-        } else {
-            pill.classList.remove('right');
-            pill.classList.add('left');
-        }
-
-        if (!topBarContainer.querySelector('.fab')) {
-            topBarContainer.insertAdjacentHTML('beforeend', `<a href="/new" class="fab">＋</a>`);
+        const track = existingPill.querySelector('.liquid-capsule-track');
+        const wasTotal = track.classList.contains('right');
+        track.classList.toggle('right', tab === 'total');
+        track.classList.toggle('left', tab !== 'total');
+        if (wasTotal !== (tab === 'total')) {
+            triggerCapsuleMorph(track);
         }
     } else {
         topBarContainer.innerHTML = `
             <div class="fixed-top-bar transparent-top-bar">
-                <div class="top-nav-pill">
-                    <div class="pill-highlight ${tab === 'total' ? 'right' : 'left'}"></div>
+                <div class="top-bar-wash"></div>
+                <div class="liquid-glass top-nav-pill">
+                    <div class="liquid-capsule-track ${tab === 'total' ? 'right' : 'left'}">
+                        <div class="liquid-capsule"></div>
+                    </div>
                     <a href="/stats?tab=year&y=${currentYear}" class="nav-st-year ${tab === 'year' ? 'active' : ''}" onclick="window.history.pushState({},'','/stats?tab=year&y=${currentYear}'); window.dispatchEvent(new Event('popstate')); return false;">year</a>
                     <a href="/stats?tab=total" class="nav-st-total ${tab === 'total' ? 'active' : ''}" onclick="window.history.pushState({},'','/stats?tab=total'); window.dispatchEvent(new Event('popstate')); return false;">total</a>
                 </div>
-                <a href="/search" class="dynamic-search-btn">🔍</a>
+                <a href="/search" class="liquid-glass liquid-glass-control dynamic-search-btn" aria-label="検索">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </a>
             </div>
-            <a href="/new" class="fab">＋</a>
         `;
     }
 
