@@ -1,5 +1,5 @@
 import { db } from '../db.js';
-import { processLiveData, liveCard, artistTile } from '../utils.js';
+import { processLiveData, liveCard, artistTile, escapeHtml } from '../utils.js';
 
 function triggerCapsuleMorph(track) {
     const capsule = track && track.querySelector('.liquid-capsule');
@@ -84,17 +84,17 @@ export async function renderHome(container, tab = 'year') {
     } else if (tab === 'year') {
         if (nextLive) {
             html += `
-            <a href="/detail/${nextLive.id}" class="next-live ${nextLive.time_class}">
+            <a href="/detail/${escapeHtml(nextLive.id)}" class="next-live ${nextLive.time_class}">
                 <div class="next-live-content">
                     <div class="next-live-label">NEXT LIVE</div>
-                    <div class="next-live-title">${nextLive.card_main_title}</div>
-                    <div class="card-title next-live-subtitle">${nextLive.card_sub_title}</div>
+                    <div class="next-live-title">${escapeHtml(nextLive.card_main_title)}</div>
+                    <div class="card-title next-live-subtitle">${escapeHtml(nextLive.card_sub_title)}</div>
                     <div class="card-title next-live-venue">
-                        <svg class="inline-icon" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${nextLive.venue || ''}
+                        <svg class="inline-icon" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${escapeHtml(nextLive.venue)}
                     </div>
                 </div>
                 <div class="next-live-countdown-container">
-                    <div class="card-title next-live-date">${nextLive.concert_date}</div>
+                    <div class="card-title next-live-date">${escapeHtml(nextLive.concert_date)}</div>
                     ${nextLive.days_left === 0 ? 
                         `<div class="next-live-countdown-num next-live-today">TODAY</div>` : 
                         `<div class="next-live-countdown-num">${nextLive.days_left}</div>

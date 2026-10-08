@@ -1,5 +1,5 @@
 import { db } from '../db.js';
-import { liveCard, processLiveData } from '../utils.js';
+import { liveCard, processLiveData, escapeHtml, isSafeImageSrc } from '../utils.js';
 import { searchArtistImage } from '../spotify.js';
 
 export async function renderArtist(container, artistName) {
@@ -42,8 +42,8 @@ export async function renderArtist(container, artistName) {
     let html = `
         <div class="content-wrapper">
             <div class="detail-centered-container detail-centered-compact">
-                ${imgUrl ? `<img src="${imgUrl}" class="detail-hero-image" loading="lazy" decoding="async">` : ''}
-                <div class="detail-main-title">${artistName}</div>
+                ${isSafeImageSrc(imgUrl) ? `<img src="${escapeHtml(imgUrl)}" class="detail-hero-image" loading="lazy" decoding="async">` : ''}
+                <div class="detail-main-title">${escapeHtml(artistName)}</div>
             </div>
 
             <div class="section-title">lives</div>

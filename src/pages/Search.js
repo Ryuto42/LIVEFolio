@@ -1,10 +1,50 @@
 import { db } from '../db.js';
-import { liveCard, artistTile, processLiveData } from '../utils.js';
+import { liveCard, artistTile, processLiveData, escapeHtml, isSafeImageSrc } from '../utils.js';
 import { syncArtistImages } from '../main.js';
 import Papa from 'papaparse';
 import { Capacitor } from '@capacitor/core';
 import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+
+const LIVE_TYPES = ['ワンマン', 'フェス', '対バン'];
+const MAX_IMPORT_RECORDS = 10000;
+const MAX_PERFORMANCES = 100;
+const MAX_TEXT_LENGTH = 500;
+const MAX_SETLIST_LENGTH = 20000;
+
+function cleanText(value, maxLength = MAX_TEXT_LENGTH) {
+    return typeof value === 'string' ? value.slice(0, maxLength) : '';
+}
+
+function sanitizeLive(raw) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+    if (typeof raw.id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(raw.id)) return null;
+    if (typeof raw.concert_date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(raw.concert_date)) return null;
+    if (raw.performances !== undefined && !Array.isArray(raw.performances)) return null;
+    if (raw.image_data != null && !isSafeImageSrc(raw.image_data)) return null;
+
+    const performances = (raw.performances || [])
+        .slice(0, MAX_PERFORMANCES)
+        .filter(p => p && typeof p === 'object')
+        .map(p => ({
+            artist_name: cleanText(p.artist_name),
+            setlist: cleanText(p.setlist, MAX_SETLIST_LENGTH)
+        }));
+
+    return {
+        id: raw.id,
+        live_type: LIVE_TYPES.includes(raw.live_type) ? raw.live_type : 'ワンマン',
+        title: cleanText(raw.title),
+        venue: cleanText(raw.venue),
+        concert_date: raw.concert_date,
+        artist_name: cleanText(raw.artist_name),
+        performances,
+        memo: cleanText(raw.memo, MAX_SETLIST_LENGTH),
+        image_data: raw.image_data || null,
+        created_at: cleanText(raw.created_at, 40),
+        updated_at: cleanText(raw.updated_at, 40)
+    };
+}
 
 export async function renderSearch(container) {
     const urlParams = new URLSearchParams(window.location.search);
@@ -24,7 +64,7 @@ export async function renderSearch(container) {
             <div class="form-container">
                 <form id="search-form" class="search-form">
                     <div class="form-group">
-                        <input type="text" name="q" value="${q}" placeholder="アーティスト名、ライブ名、会場で検索..." required>
+                        <input type="text" name="q" value="${escapeHtml(q)}" placeholder="アーティスト名、ライブ名、会場で検索..." required>
                     </div>
                     <button type="submit" class="submit-btn submit-btn-flush">検索</button>
                 </form>
@@ -53,7 +93,7 @@ export async function renderSearch(container) {
                             <label style="font-size:13px; display:block; margin-bottom:8px; color:var(--text-main); font-weight:bold;">
                                 データ入力 <span style="color:var(--text-sub); font-size:11px; font-weight:normal; margin-left:6px;">(CSV または JSON)</span>
                             </label>
-                            <button type="button" class="submit-btn submit-btn-flush" onclick="document.getElementById('csv-import-input').click()" style="padding: 12px; font-size: 14px; background-color: var(--bg-card-strong); width:100%; border: 1px solid var(--border-strong); color: var(--text-main);">
+                            <button type="button" class="submit-btn submit-btn-flush" id="import-btn" style="padding: 12px; font-size: 14px; background-color: var(--bg-card-strong); width:100%; border: 1px solid var(--border-strong); color: var(--text-main);">
                                 インポート
                             </button>
                         </div>
@@ -134,6 +174,10 @@ export async function renderSearch(container) {
     });
 
 // Bind Export/Import
+document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('csv-import-input').click();
+});
+
 document.getElementById('export-btn').addEventListener('click', async () => {
     const rawLives = await db.lives.toArray();
     const jsonStr = JSON.stringify(rawLives);
@@ -198,8 +242,14 @@ document.getElementById('csv-import-input').addEventListener('change', (e) => {
         try {
             const data = JSON.parse(text);
             if (Array.isArray(data)) {
-                await db.lives.bulkPut(data);
-                alert(data.length + '件のライブデータを復元しました！');
+                if (data.length > MAX_IMPORT_RECORDS) {
+                    alert('データ件数が多すぎます（上限 ' + MAX_IMPORT_RECORDS + ' 件）。');
+                    return;
+                }
+                const lives = data.map(sanitizeLive).filter(Boolean);
+                await db.lives.bulkPut(lives);
+                const skipped = data.length - lives.length;
+                alert(lives.length + '件のライブデータを復元しました！' + (skipped > 0 ? `（不正な${skipped}件をスキップ）` : ''));
                 window.location.reload();
                 return;
             }
@@ -212,7 +262,7 @@ document.getElementById('csv-import-input').addEventListener('change', (e) => {
         header: true,
         skipEmptyLines: true,
         complete: async (results) => {
-            const data = results.data;
+            const data = results.data.slice(0, MAX_IMPORT_RECORDS);
             let importedCount = 0;
             for (const row of data) {
                 if (!row.concert_date || !row.artist_name) continue; // Minimum required
@@ -221,16 +271,18 @@ document.getElementById('csv-import-input').addEventListener('change', (e) => {
                 try {
                     if (row.performances_json) {
                         const parsed = JSON.parse(row.performances_json);
-                        perfs = parsed.map(p => ({
-                            artist_name: p.artist_name || p.artist || '',
-                            setlist: p.setlist || ''
-                        }));
+                        if (Array.isArray(parsed)) {
+                            perfs = parsed.map(p => ({
+                                artist_name: p?.artist_name || p?.artist || '',
+                                setlist: p?.setlist || ''
+                            }));
+                        }
                     }
                 } catch(e) {}
 
                 let dateStr = row.concert_date;
-                if (dateStr.includes('/')) {
-                    const parts = dateStr.split('/');
+                if (/[\/-]/.test(dateStr)) {
+                    const parts = dateStr.split(/[\/-]/);
                     if (parts.length === 3) {
                         const y = parts[0];
                         const m = parts[1].padStart(2, '0');
@@ -241,7 +293,7 @@ document.getElementById('csv-import-input').addEventListener('change', (e) => {
                     }
                 }
 
-                await db.lives.add({
+                const live = sanitizeLive({
                     id: crypto.randomUUID(),
                     concert_date: dateStr,
                     artist_name: row.artist_name,
@@ -252,6 +304,8 @@ document.getElementById('csv-import-input').addEventListener('change', (e) => {
                     created_at: new Date().toISOString(),
                     updated_at: new Date().toISOString()
                 });
+                if (!live) continue;
+                await db.lives.add(live);
                 importedCount++;
             }
             alert(importedCount + '件のライブをインポートしました！');

@@ -1,6 +1,6 @@
 import './style.css';
 import { renderHome } from './pages/Home.js';
-import { handleSpotifyCallback, searchArtistImage } from './spotify.js';
+import { searchArtistImage } from './spotify.js';
 import { db } from './db.js';
 import { App } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
@@ -58,15 +58,6 @@ const appContent = document.getElementById('app-content');
 
 async function router(isPopState = false) {
     const path = window.location.pathname;
-
-    if (path === '/callback') {
-        const token = await handleSpotifyCallback();
-        if (token) {
-            window.location.href = '/';
-            return;
-        }
-    }
-
 
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     const navHighlight = document.getElementById('nav-highlight');
@@ -167,9 +158,15 @@ document.addEventListener('click', e => {
         }
 
         window.history.pushState({}, '', link.href);
-        router();
+        router(navType === 'tab');
     }
 });
+
+document.addEventListener('error', e => {
+    if (e.target instanceof HTMLImageElement && e.target.closest('.artist-tile-image')) {
+        e.target.hidden = true;
+    }
+}, true);
 
 window.addEventListener('popstate', () => {
     router(true);

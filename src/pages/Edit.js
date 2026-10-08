@@ -1,14 +1,16 @@
 import { db } from '../db.js';
 import { setupImageUpload } from '../imageUtils.js';
+import { escapeHtml, isSafeImageSrc } from '../utils.js';
 
 export async function renderEditLive(container, id) {
     const live = await db.lives.get(id);
     if (!live) return;
+    const imageSrc = isSafeImageSrc(live.image_data) ? escapeHtml(live.image_data) : '';
 
     const topBarContainer = document.getElementById('top-bar-container');
     topBarContainer.innerHTML = `
         <div class="fixed-top-bar">
-            <a href="/detail/${id}" data-nav="back" class="close-btn top-bar-left">←</a>
+            <a href="/detail/${escapeHtml(id)}" data-nav="back" class="close-btn top-bar-left">←</a>
             <div class="top-bar-title">edit</div>
             <div class="top-bar-spacer"></div>
         </div>
@@ -29,10 +31,10 @@ export async function renderEditLive(container, id) {
 
     const datalistsHTML = `
         <datalist id="venue-list">
-            ${Array.from(venueSet).map(v => `<option value="${v}"></option>`).join('')}
+            ${Array.from(venueSet).map(v => `<option value="${escapeHtml(v)}"></option>`).join('')}
         </datalist>
         <datalist id="artist-list">
-            ${Array.from(artistSet).map(a => `<option value="${a}"></option>`).join('')}
+            ${Array.from(artistSet).map(a => `<option value="${escapeHtml(a)}"></option>`).join('')}
         </datalist>
     `;
 
@@ -55,21 +57,21 @@ export async function renderEditLive(container, id) {
                     <label class="form-label-lg">写真 <span class="label-note">会場やチケットの写真を記録しよう</span></label>
                 </div>
                 <label class="image-upload-box">
-                    <span id="upload-icon" ${live.image_data ? 'hidden' : ''}>＋</span>
-                    <img id="image-preview" src="${live.image_data || ''}" ${live.image_data ? '' : 'hidden'}>
-                    <input type="file" name="image" accept="image/*" id="image-input" data-base64="${live.image_data || ''}">
+                    <span id="upload-icon" ${imageSrc ? 'hidden' : ''}>＋</span>
+                    <img id="image-preview" src="${imageSrc}" ${imageSrc ? '' : 'hidden'}>
+                    <input type="file" name="image" accept="image/*" id="image-input" data-base64="${imageSrc}">
                 </label>
                 <div class="form-group">
                     <label>公演名 *</label>
-                    <input type="text" name="event_title" value="${live.title}" required>
+                    <input type="text" name="event_title" value="${escapeHtml(live.title)}" required>
                 </div>
                 <div class="form-group">
                     <label>会場</label>
-                    <input type="text" name="venue_name" value="${live.venue}" list="venue-list">
+                    <input type="text" name="venue_name" value="${escapeHtml(live.venue)}" list="venue-list">
                 </div>
                 <div class="form-group">
                     <label>日付 *</label>
-                    <input type="date" name="concert_date" value="${live.concert_date}" required>
+                    <input type="date" name="concert_date" value="${escapeHtml(live.concert_date)}" required>
                 </div>
 
                 <div id="performances-container">
@@ -80,11 +82,11 @@ export async function renderEditLive(container, id) {
             <div class="performance-group" style="margin-top:20px;">
                 <div class="form-group">
                     <label>アーティスト名 *</label>
-                    <input type="text" name="artist_name[]" value="${perf.artist_name}" list="artist-list" required>
+                    <input type="text" name="artist_name[]" value="${escapeHtml(perf.artist_name)}" list="artist-list" required>
                 </div>
                 <div class="form-group form-group-compact">
                     <label>セットリスト (1行に1曲)</label>
-                    <textarea name="setlist[]" rows="4">${perf.setlist || ''}</textarea>
+                    <textarea name="setlist[]" rows="4">${escapeHtml(perf.setlist)}</textarea>
                 </div>
                 <button type="button" class="remove-btn" style="color:var(--danger); background:none; border:none; padding:10px 0;">削除</button>
             </div>

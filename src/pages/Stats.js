@@ -1,5 +1,5 @@
 import { db } from '../db.js';
-import { liveCard, processLiveData } from '../utils.js';
+import { liveCard, processLiveData, escapeHtml } from '../utils.js';
 
 function triggerCapsuleMorph(track) {
     const capsule = track && track.querySelector('.liquid-capsule');
@@ -97,12 +97,12 @@ export async function renderStats(container) {
         leftLink.href = `/stats?tab=year&y=${currentYear}`;
         leftLink.className = `nav-st-year ${tab === 'year' ? 'active' : ''}`;
         leftLink.textContent = 'year';
-        leftLink.setAttribute('onclick', `window.history.pushState({},'','/stats?tab=year&y=${currentYear}'); window.dispatchEvent(new Event('popstate')); return false;`);
+        leftLink.dataset.nav = 'tab';
 
         rightLink.href = `/stats?tab=total`;
         rightLink.className = `nav-st-total ${tab === 'total' ? 'active' : ''}`;
         rightLink.textContent = 'total';
-        rightLink.setAttribute('onclick', `window.history.pushState({},'','/stats?tab=total'); window.dispatchEvent(new Event('popstate')); return false;`);
+        rightLink.dataset.nav = 'tab';
 
         const track = existingPill.querySelector('.liquid-capsule-track');
         const wasTotal = track.classList.contains('right');
@@ -119,8 +119,8 @@ export async function renderStats(container) {
                     <div class="liquid-capsule-track ${tab === 'total' ? 'right' : 'left'}">
                         <div class="liquid-capsule"></div>
                     </div>
-                    <a href="/stats?tab=year&y=${currentYear}" class="nav-st-year ${tab === 'year' ? 'active' : ''}" onclick="window.history.pushState({},'','/stats?tab=year&y=${currentYear}'); window.dispatchEvent(new Event('popstate')); return false;">year</a>
-                    <a href="/stats?tab=total" class="nav-st-total ${tab === 'total' ? 'active' : ''}" onclick="window.history.pushState({},'','/stats?tab=total'); window.dispatchEvent(new Event('popstate')); return false;">total</a>
+                    <a href="/stats?tab=year&y=${currentYear}" class="nav-st-year ${tab === 'year' ? 'active' : ''}" data-nav="tab">year</a>
+                    <a href="/stats?tab=total" class="nav-st-total ${tab === 'total' ? 'active' : ''}" data-nav="tab">total</a>
                 </div>
                 <a href="/search" class="liquid-glass liquid-glass-control dynamic-search-btn" aria-label="検索">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -148,7 +148,7 @@ export async function renderStats(container) {
         html += `<div class="year-selector">`;
         if (currentIdx < availableYears.length - 1) {
             const nextYear = availableYears[currentIdx + 1];
-            html += `<a href="#" onclick="window.history.pushState({},'','/stats?tab=year&y=${nextYear}'); window.dispatchEvent(new Event('popstate')); return false;">＜</a>`;
+            html += `<a href="/stats?tab=year&y=${nextYear}" data-nav="tab">＜</a>`;
         } else {
             html += `<span class="year-selector-placeholder">＜</span>`;
         }
@@ -157,7 +157,7 @@ export async function renderStats(container) {
         
         if (currentIdx > 0) {
             const prevYear = availableYears[currentIdx - 1];
-            html += `<a href="#" onclick="window.history.pushState({},'','/stats?tab=year&y=${prevYear}'); window.dispatchEvent(new Event('popstate')); return false;">＞</a>`;
+            html += `<a href="/stats?tab=year&y=${prevYear}" data-nav="tab">＞</a>`;
         } else {
             html += `<span class="year-selector-placeholder">＞</span>`;
         }
@@ -205,12 +205,12 @@ export async function renderStats(container) {
                 <div class="ranking-item accordion-header" data-action="accordion-toggle">
                     <div class="ranking-name ranking-name-main">
                         <div class="ranking-track-line">
-                            <a href="https://open.spotify.com/search/${encodeURIComponent(t.artist)} ${encodeURIComponent(t.song)}" target="_blank" class="ranking-spotify-link">
+                            <a href="https://open.spotify.com/search/${encodeURIComponent(t.artist)} ${encodeURIComponent(t.song)}" target="_blank" rel="noopener" class="ranking-spotify-link">
                                 <svg class="spotify-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.973c2.5-1.473 5.5-.973 7.5.527M9 15c1.5-1 4-1 5 .5M7 9c3-2 6-2 9 0"></path></svg>
                             </a>
-                            <span class="ranking-track-title">${t.song}</span>
+                            <span class="ranking-track-title">${escapeHtml(t.song)}</span>
                         </div>
-                        <div class="ranking-track-artist">${t.artist}</div>
+                        <div class="ranking-track-artist">${escapeHtml(t.artist)}</div>
                     </div>
                     <div class="ranking-count">
                         <span>${t.count}</span>times 
@@ -223,9 +223,9 @@ export async function renderStats(container) {
         `;
         t.lives.forEach(live => {
             html += `
-                            <a href="/detail/${live.id}" class="accordion-live-link">
-                                <span class="accordion-live-date">${live.date}</span>
-                                <span class="accordion-live-title">${live.title}</span>
+                            <a href="/detail/${escapeHtml(live.id)}" class="accordion-live-link">
+                                <span class="accordion-live-date">${escapeHtml(live.date)}</span>
+                                <span class="accordion-live-title">${escapeHtml(live.title)}</span>
                             </a>
             `;
         });
@@ -246,7 +246,7 @@ export async function renderStats(container) {
         html += `
             <div class="accordion-item" data-accordion-id="venue-${i}">
                 <div class="ranking-item accordion-header" data-action="accordion-toggle">
-                    <div class="ranking-name ranking-name-main">${v.name}</div>
+                    <div class="ranking-name ranking-name-main">${escapeHtml(v.name)}</div>
                     <div class="ranking-count">
                         <span>${v.count}</span>times
                         <svg class="accordion-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
@@ -258,9 +258,9 @@ export async function renderStats(container) {
         `;
         v.lives.forEach(live => {
             html += `
-                            <a href="/detail/${live.id}" class="accordion-live-link">
-                                <span class="accordion-live-date">${live.date}</span>
-                                <span class="accordion-live-title">${live.title}</span>
+                            <a href="/detail/${escapeHtml(live.id)}" class="accordion-live-link">
+                                <span class="accordion-live-date">${escapeHtml(live.date)}</span>
+                                <span class="accordion-live-title">${escapeHtml(live.title)}</span>
                             </a>
             `;
         });
@@ -279,9 +279,9 @@ export async function renderStats(container) {
 
     artistRanking.forEach(a => {
         html += `
-            <a href="/artist/${encodeURIComponent(a.name)}" class="card-link">
+            <a href="/artist/${escapeHtml(encodeURIComponent(a.name))}" class="card-link">
                 <div class="ranking-item">
-                    <div class="ranking-name">${a.name}</div>
+                    <div class="ranking-name">${escapeHtml(a.name)}</div>
                     <div class="ranking-count"><span>${a.count}</span>times <span class="ranking-chevron">＞</span></div>
                 </div>
             </a>

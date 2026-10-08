@@ -1,3 +1,26 @@
+const HTML_ESCAPES = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+
+export function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>"']/g, c => HTML_ESCAPES[c]);
+}
+
+const DATA_IMAGE_RE = /^data:image\/(png|jpeg|webp|gif);base64,[A-Za-z0-9+/]+={0,2}$/;
+export const MAX_DATA_IMAGE_LENGTH = 3000000;
+export const MAX_IMAGE_URL_LENGTH = 2048;
+
+export function isSafeImageSrc(value) {
+    if (typeof value !== 'string') return false;
+    if (value.startsWith('data:')) {
+        return value.length <= MAX_DATA_IMAGE_LENGTH && DATA_IMAGE_RE.test(value);
+    }
+    if (value.length > MAX_IMAGE_URL_LENGTH) return false;
+    try {
+        return new URL(value).protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
 export function processLiveData(d) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -55,21 +78,21 @@ export function liveCard(history) {
     if (history.time_class === 'card-past') {
         imgHtml = `
         <div class="card-image">
-            ${history.image_data ? `<img src="${history.image_data}" loading="lazy" decoding="async" alt="">` : ''}
+            ${isSafeImageSrc(history.image_data) ? `<img src="${escapeHtml(history.image_data)}" loading="lazy" decoding="async" alt="">` : ''}
         </div>
         `;
     }
 
     return `
-    <a href="/detail/${history.id}" class="card-link">
+    <a href="/detail/${escapeHtml(history.id)}" class="card-link">
         <div class="card ${history.time_class}">
             ${imgHtml}
             <div class="card-info">
-                <div class="card-date">${history.concert_date}</div>
-                <div class="card-artist">${history.card_main_title}</div>
-                <div class="card-title">${history.card_sub_title}</div>
+                <div class="card-date">${escapeHtml(history.concert_date)}</div>
+                <div class="card-artist">${escapeHtml(history.card_main_title)}</div>
+                <div class="card-title">${escapeHtml(history.card_sub_title)}</div>
             </div>
-            <div class="detail-type-tag live-type-card ${history.live_type_class}">${history.live_type || ''}</div>
+            <div class="detail-type-tag live-type-card ${history.live_type_class}">${escapeHtml(history.live_type)}</div>
         </div>
     </a>
     `;
@@ -77,12 +100,12 @@ export function liveCard(history) {
 
 export function artistTile(artist) {
     return `
-    <a href="/artist/${encodeURIComponent(artist.name)}" class="artist-tile">
+    <a href="/artist/${escapeHtml(encodeURIComponent(artist.name))}" class="artist-tile">
         <div class="artist-tile-image">
-            <img src="${artist.image_data || '/icon.png'}" loading="lazy" decoding="async" alt="" onerror="this.hidden=true">
+            <img src="${isSafeImageSrc(artist.image_data) ? escapeHtml(artist.image_data) : '/icon.png'}" loading="lazy" decoding="async" alt="">
         </div>
-        <div class="artist-tile-name">${artist.name}</div>
-        <div class="artist-tile-meta">${artist.latest_date || ''} • ${artist.count || 0} Live</div>
+        <div class="artist-tile-name">${escapeHtml(artist.name)}</div>
+        <div class="artist-tile-meta">${escapeHtml(artist.latest_date)} • ${artist.count || 0} Live</div>
     </a>
     `;
 }

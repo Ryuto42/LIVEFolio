@@ -1,5 +1,6 @@
 import { db } from '../db.js';
 import { setupImageUpload } from '../imageUtils.js';
+import { escapeHtml } from '../utils.js';
 
 export async function renderNewLive(container) {
     const topBarContainer = document.getElementById('top-bar-container');
@@ -26,10 +27,10 @@ export async function renderNewLive(container) {
 
     const datalistsHTML = `
         <datalist id="venue-list">
-            ${Array.from(venueSet).map(v => `<option value="${v}"></option>`).join('')}
+            ${Array.from(venueSet).map(v => `<option value="${escapeHtml(v)}"></option>`).join('')}
         </datalist>
         <datalist id="artist-list">
-            ${Array.from(artistSet).map(a => `<option value="${a}"></option>`).join('')}
+            ${Array.from(artistSet).map(a => `<option value="${escapeHtml(a)}"></option>`).join('')}
         </datalist>
     `;
 
