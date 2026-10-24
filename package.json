@@ -1,23 +1,32 @@
 {
-  "name": "livefolio-mobile",
-  "version": "0.0.0",
+  "name": "livefolio",
+  "version": "1.0.0",
+  "description": "Record the live concerts you attend and look back on them. / 参戦したライブを記録して振り返るアプリ",
   "private": true,
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ryuto42/LIVEFolio.git"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=20.19"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "postinstall": "sed -i '' \"s/apply plugin: 'kotlin-android'//g\" node_modules/@capacitor/filesystem/android/build.gradle || true"
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "@capacitor/android": "^8.5.2",
     "@capacitor/cli": "^8.5.2",
     "vite": "^8.3.3"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.2",
     "@capacitor/app": "^8.1.2",
     "@capacitor/core": "^8.5.2",
     "@capacitor/filesystem": "^8.1.4",
+    "@capacitor/haptics": "^8.0.2",
     "@capacitor/ios": "^8.5.2",
     "@capacitor/share": "^8.0.3",
     "@capacitor/status-bar": "^8.0.4",
