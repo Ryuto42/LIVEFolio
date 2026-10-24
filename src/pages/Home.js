@@ -1,166 +1,141 @@
-import { db } from '../db.js';
-import { processLiveData, liveCard, artistTile, escapeHtml } from '../utils.js';
+import { loadLives, loadArtistImages, splitByToday, rankArtists, rankVenues, filterYear, dayMap } from '../domain/stats.js';
+import { escapeHtml, formatDate, nf, parseDate, toDateStr, yearOf, todayStr } from '../utils.js';
+import { glassButton, sectionHeader, liveRow, liveArtwork, emptyState, pillButton } from '../ui/components.js';
+import { countUp } from '../ui/motion.js';
+import { icon } from '../ui/icons.js';
 
-function triggerCapsuleMorph(track) {
-    const capsule = track && track.querySelector('.liquid-capsule');
-    if (!capsule) return;
-    capsule.classList.remove('is-morphing');
-    void capsule.offsetWidth;
-    capsule.classList.add('is-morphing');
+export function topActions() {
+    return glassButton({ href: '/settings', iconName: 'gear', label: '設定' });
 }
 
-export async function renderHome(container, tab = 'year') {
-    // Re-render when background artist sync completes
-    window.addEventListener('artists-updated', () => {
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('tab') === 'artist' && window.location.pathname === '/') {
-            renderHome(container, 'artist');
+export default async function renderHome(ctx) {
+    ctx.shell({ title: 'ホーム', actions: topActions() });
+    const content = ctx.body;
+
+    async function draw() {
+        const [lives] = await Promise.all([loadLives(), loadArtistImages()]);
+        if (lives.length === 0) {
+            content.innerHTML = emptyState({
+                iconName: 'ticket',
+                title: 'ようこそ',
+                body: '参戦したライブを記録して、あなただけのライブ年表をつくりましょう。',
+                action: pillButton({ href: '/new', label: 'ライブを記録', iconName: 'plus' })
+                    + pillButton({ href: '/settings', label: 'データを読み込む', variant: 'secondary' }),
+            });
+            return;
         }
-    }, { once: true });
-
-    const topBarContainer = document.getElementById('top-bar-container');
-    const rawLives = await db.lives.toArray();
-    const lives = rawLives.map(l => processLiveData(l)).sort((a, b) => a.concert_date > b.concert_date ? 1 : -1);
-
-    const todayStr = new Date().toISOString().substring(0, 10);
-    const upcoming = lives.filter(l => l.concert_date >= todayStr);
-    const past = lives.filter(l => l.concert_date < todayStr).reverse();
-
-    let nextLive = null;
-    if (upcoming.length > 0) {
-        nextLive = upcoming[0];
+        content.innerHTML = yearView(lives);
+        content.querySelectorAll('[data-count]').forEach(el => countUp(el, +el.dataset.count, el.dataset.countKey));
+        ctx.reveal(content);
     }
 
-    const existingPill = topBarContainer.querySelector('.top-nav-pill');
+    ctx.onData(draw);
+    await draw();
+}
 
-    if (existingPill) {
-        const links = existingPill.querySelectorAll('a');
-        const leftLink = links[0];
-        const rightLink = links[1];
-
-        leftLink.href = "/?tab=year";
-        leftLink.className = `nav-idx-year ${tab === 'year' ? 'active' : ''}`;
-        leftLink.textContent = 'year';
-
-        rightLink.href = "/?tab=artist";
-        rightLink.className = `nav-idx-artist ${tab === 'artist' ? 'active' : ''}`;
-        rightLink.textContent = 'artist';
-
-        const track = existingPill.querySelector('.liquid-capsule-track');
-        const wasArtist = track.classList.contains('right');
-        track.classList.toggle('right', tab === 'artist');
-        track.classList.toggle('left', tab !== 'artist');
-        if (wasArtist !== (tab === 'artist')) {
-            triggerCapsuleMorph(track);
-        }
-    } else {
-        topBarContainer.innerHTML = `
-            <div class="fixed-top-bar transparent-top-bar">
-                <div class="top-bar-wash"></div>
-                <div class="liquid-glass top-nav-pill">
-                    <div class="liquid-capsule-track ${tab === 'artist' ? 'right' : 'left'}">
-                        <div class="liquid-capsule"></div>
-                    </div>
-                    <a href="/?tab=year" class="nav-idx-year ${tab === 'year' ? 'active' : ''}">year</a>
-                    <a href="/?tab=artist" class="nav-idx-artist ${tab === 'artist' ? 'active' : ''}">artist</a>
-                </div>
-                <a href="/search" class="liquid-glass liquid-glass-control dynamic-search-btn" aria-label="検索">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </a>
-            </div>
-        `;
-    }
-
+function yearView(lives) {
+    const { upcoming, past } = splitByToday(lives);
+    const thisYear = new Date().getFullYear();
+    const lastYear = filterYear(lives, thisYear - 1).length;
+    const yearCount = filterYear(lives, thisYear).length;
+    const recapYear = yearCount > 0 ? thisYear : yearOf(lives[lives.length - 1].concert_date);
+    const artistsCount = rankArtists(lives).length;
+    const venuesCount = rankVenues(lives).length;
+    const days = new Set(lives.filter(l => l.concert_date <= todayStr()).map(l => l.concert_date)).size;
+    let order = 0;
+    const d = () => Math.min(order++, 7) * 60;
     let html = '';
 
-    if (lives.length === 0) {
+    const next = upcoming[0];
+    if (next) {
+        const big = next.days_left === 0 ? 'TODAY' : next.days_left === 1 ? '明日' : null;
         html += `
-            <div class="empty-state" style="margin-top: 100px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🎸</div>
-                <h3>No Live Records Yet</h3>
-                <p style="font-size: 14px;">Add your first concert by tapping the <span style="font-weight: bold; color: var(--text-main);">＋</span> button in the bottom right!</p>
+        <a href="/detail/${escapeHtml(next.id)}" class="next-card pressable ${next.days_left <= 1 ? 'is-soon' : ''}" data-reveal="${d()}">
+            <div class="next-eyebrow">${icon('ticket', 11)}NEXT LIVE</div>
+            <div class="next-main">
+                <div class="next-text">
+                    <div class="next-title">${escapeHtml(next.card_main_title)}</div>
+                    ${next.card_sub_title ? `<div class="next-sub">${escapeHtml(next.card_sub_title)}</div>` : ''}
+                    <div class="next-meta">${escapeHtml(formatDate(next.concert_date, { weekday: true }))}</div>
+                    ${next.venue ? `<div class="next-meta">${icon('pin', 11)}${escapeHtml(next.venue)}</div>` : ''}
+                </div>
+                <div class="next-count">
+                    ${big ? `<span class="next-num next-num--word">${big}</span>` : `<span class="next-num num" data-count="${next.days_left}" data-count-key="next-${next.id}">0</span><span class="next-unit">日後</span>`}
+                </div>
             </div>
-        `;
-    } else if (tab === 'year') {
-        if (nextLive) {
-            html += `
-            <a href="/detail/${escapeHtml(nextLive.id)}" class="next-live ${nextLive.time_class}">
-                <div class="next-live-content">
-                    <div class="next-live-label">NEXT LIVE</div>
-                    <div class="next-live-title">${escapeHtml(nextLive.card_main_title)}</div>
-                    <div class="card-title next-live-subtitle">${escapeHtml(nextLive.card_sub_title)}</div>
-                    <div class="card-title next-live-venue">
-                        <svg class="inline-icon" viewBox="0 0 24 24" width="12" height="12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${escapeHtml(nextLive.venue)}
-                    </div>
-                </div>
-                <div class="next-live-countdown-container">
-                    <div class="card-title next-live-date">${escapeHtml(nextLive.concert_date)}</div>
-                    ${nextLive.days_left === 0 ? 
-                        `<div class="next-live-countdown-num next-live-today">TODAY</div>` : 
-                        `<div class="next-live-countdown-num">${nextLive.days_left}</div>
-                         <div class="next-live-countdown-text">DAYS</div>`
-                    }
-                </div>
-            </a>
-            `;
-        }
-
-        if (upcoming.length > 1) {
-            html += `<div class="section-title">upcoming</div><div class="card-list">`;
-            upcoming.slice(1, 4).forEach(h => html += liveCard(h));
-            html += `</div>`;
-        }
-
-        if (past.length > 0) {
-            html += `<div class="section-title">past</div><div class="card-list">`;
-            past.slice(0, 3).forEach(h => html += liveCard(h));
-            html += `</div>`;
-        }
-
-    } else if (tab === 'artist') {
-        const artists = await getArtistStats(lives);
-        html += `
-        <div class="section-title section-title-row section-title-flush">
-            <span>${artists.length} artists</span>
-            <span class="section-title-meta">most seen ↓</span>
-        </div>
-        <div class="artist-grid">
-        `;
-        artists.forEach(a => html += artistTile(a));
-        html += `</div>`;
+        </a>`;
     }
 
+    html += `
+        <a href="/recap" class="replay-banner pressable" data-reveal="${d()}">
+            <div class="replay-label">LIVEFolio Replay</div>
+            <div class="replay-year">${recapYear}</div>
+            <div class="replay-watermark">${recapYear}</div>
+            <div class="replay-foot"><span>${recapYear}年のライブを振り返る</span><span class="replay-go">${icon('play', 12)}</span></div>
+        </a>`;
 
-    container.innerHTML = html;
+    html += sectionHeader('あなたの記録');
+    html += `
+        <div class="total-card" data-reveal="${d()}">
+            <div class="total-label">これまでの参戦</div>
+            <div class="total-number"><span class="num" data-count="${lives.filter(l => l.concert_date <= todayStr()).length}" data-count-key="home-total">0</span><span class="total-unit">回</span></div>
+            <div class="total-note">${nf.format(days)}日、ライブ会場にいました</div>
+            <div class="total-stats">
+                <div><b class="num">${nf.format(yearCount)}</b><span>今年</span></div>
+                <div><b class="num">${nf.format(upcoming.length)}</b><span>予定</span></div>
+                <div><b class="num">${nf.format(artistsCount)}</b><span>アーティスト</span></div>
+                <div><b class="num">${nf.format(venuesCount)}</b><span>会場</span></div>
+            </div>
+        </div>
+        <div class="tile-row" data-reveal="${d()}">
+            <a href="/stats?tab=year&y=${thisYear}" class="tile pressable">
+                <div class="tile-head">${thisYear}年の参戦${icon('chevronRight', 11)}</div>
+                <div class="main-number"><span class="num">${nf.format(yearCount)}</span><small>回</small></div>
+                <div class="tile-note ${yearCount >= lastYear ? 'is-up' : 'is-down'}">昨年 ${nf.format(lastYear)}回${yearCount !== lastYear ? `（${yearCount > lastYear ? '+' : ''}${yearCount - lastYear}）` : ''}</div>
+            </a>
+            <a href="/calendar" class="tile pressable">
+                <div class="tile-head">参戦カレンダー${icon('chevronRight', 11)}</div>
+                ${miniHeatmap(lives)}
+            </a>
+        </div>`;
+
+    if (upcoming.length > 1) {
+        html += sectionHeader('これからのライブ', upcoming.length > 4 ? { href: '/stats?cat=lives', label: 'すべて見る' } : {});
+        html += `<div class="list">${upcoming.slice(1, 4).map(l => liveRow(l, { reveal: d() })).join('')}</div>`;
+    }
+
+    if (past.length > 0) {
+        html += sectionHeader('最近のライブ', { href: '/stats?cat=lives' });
+        html += `<div class="h-scroll" data-reveal="${d()}">${past.slice(0, 10).map(pastCard).join('')}</div>`;
+    }
+    return html;
 }
 
-async function getArtistStats(lives) {
-    const artistMap = {};
-    for (const live of lives) {
-        if (live.performances) {
-            for (const p of live.performances) {
-                const name = p.artist_name;
-                if (!name) continue;
-                if (!artistMap[name]) artistMap[name] = { count: 0, latest_date: '0000-00-00' };
-                artistMap[name].count++;
-                if (live.concert_date > artistMap[name].latest_date) {
-                    artistMap[name].latest_date = live.concert_date;
-                }
-            }
-        }
+function pastCard(live) {
+    return `<a href="/detail/${escapeHtml(live.id)}" class="past-card pressable">
+        ${liveArtwork(live, { size: 128, shared: `live-${live.id}` })}
+        <div class="past-title">${escapeHtml(live.card_main_title)}</div>
+        <div class="past-sub">${escapeHtml(formatDate(live.concert_date))}</div>
+    </a>`;
+}
+
+function miniHeatmap(lives) {
+    const map = dayMap(lives);
+    const today = parseDate(todayStr());
+    const end = new Date(today);
+    end.setDate(end.getDate() + (6 - end.getDay()));
+    const start = new Date(end);
+    start.setDate(start.getDate() - 7 * 14 + 1);
+    let cells = '';
+    let total = 0;
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const key = toDateStr(d);
+        const n = map.get(key)?.length || 0;
+        if (d <= today) total += n;
+        const level = n === 0 ? 0 : Math.min(4, n + 1);
+        cells += `<i class="hm-cell lv${level} ${d > today ? 'is-future' : ''}" style="--col:${Math.floor((d - start) / 604800000)}"></i>`;
     }
-
-    const artistNames = Object.keys(artistMap);
-    const dbArtists = await db.artists.where('name').anyOf(artistNames).toArray();
-    const dbArtistMap = {};
-    dbArtists.forEach(a => dbArtistMap[a.name] = a);
-
-    return artistNames.map(name => {
-        return {
-            name: name,
-            count: artistMap[name].count,
-            latest_date: artistMap[name].latest_date,
-            image_data: dbArtistMap[name] ? dbArtistMap[name].image_data : null
-        };
-    }).sort((a, b) => b.count - a.count);
+    return `<div class="main-number"><span class="num">${nf.format(total)}</span><small>回</small></div>
+        <div class="tile-note">直近14週</div>
+        <div class="mini-heatmap">${cells}</div>`;
 }

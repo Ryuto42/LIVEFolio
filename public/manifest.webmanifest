@@ -1,0 +1,22 @@
+{
+  "name": "LIVEFolio",
+  "short_name": "LIVEFolio",
+  "description": "参戦したライブを記録して振り返るアプリ",
+  "lang": "ja",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#121212",
+  "theme_color": "#121212",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "ライブを記録", "url": "./new", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "検索", "url": "./search", "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

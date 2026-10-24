@@ -2,27 +2,22 @@
 <html lang="ja">
   <head>
     <meta charset="UTF-8" />
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://accounts.spotify.com https://api.spotify.com; object-src 'none'; base-uri 'self'; form-action 'self'">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.scdn.co https://*.spotifycdn.com https://*.mzstatic.com; connect-src 'self' https://accounts.spotify.com https://api.spotify.com https://open.spotify.com https://itunes.apple.com; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>LIVEFolio</title>
-    <meta name="theme-color" content="#000000">
+    <meta name="description" content="参戦したライブを記録して振り返るアプリ">
+    <meta name="theme-color" content="#121212">
+    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="icon" type="image/png" href="/icons/favicon-64.png">
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="LIVEFolio">
   </head>
   <body>
-    <div id="top-bar-container"></div>
-    <div class="app-container">
-        <div id="app-content"></div>
-        
-        <div class="liquid-tabbar-wrap">
-            <div class="liquid-glass liquid-tabbar-pill">
-                <div id="nav-highlight" class="liquid-capsule-track left">
-                    <div class="liquid-capsule"></div>
-                </div>
-                <a href="/" class="nav-item nav-home active" data-nav="home">HOME</a>
-                <a href="/stats" class="nav-item nav-stats" data-nav="stats">STATS</a>
-            </div>
-            <a href="/new" class="liquid-glass liquid-glass-control liquid-add-button" aria-label="ライブを追加">＋</a>
-        </div>
-    </div>
+    <main id="pages"></main>
+    <nav class="tabbar" aria-label="メインナビゲーション"></nav>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>

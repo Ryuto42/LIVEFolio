@@ -1,340 +1,211 @@
-import { db } from '../db.js';
-import { liveCard, processLiveData, escapeHtml } from '../utils.js';
+import { loadLives, loadArtistImages, availableYears, filterYear, rankArtists, rankVenues, rankTracks, assignRanks, withDelta } from '../domain/stats.js';
+import { escapeHtml, formatDate, nf, seedColors, spotifySearchUrl, artistHref, parseYear } from '../utils.js';
+import { sectionHeader, liveRow, artwork, trackArtwork, trackLink, emptyState, deltaBadge, statTile } from '../ui/components.js';
+import { icon } from '../ui/icons.js';
+import { tick } from '../ui/haptics.js';
+import { topActions } from './Home.js';
 
-function triggerCapsuleMorph(track) {
-    const capsule = track && track.querySelector('.liquid-capsule');
-    if (!capsule) return;
-    capsule.classList.remove('is-morphing');
-    void capsule.offsetWidth;
-    capsule.classList.add('is-morphing');
+const CATS = [
+    { value: 'lives', label: 'ライブ' },
+    { value: 'artists', label: 'アーティスト' },
+    { value: 'venues', label: '会場' },
+    { value: 'tracks', label: '曲' },
+];
+
+export default async function renderStats(ctx) {
+    ctx.shell({ title: '統計', actions: topActions() });
+    const q = ctx.query;
+    const state = {
+        year: q.get('tab') === 'year' ? (parseYear(q.get('y')) || new Date().getFullYear()) : null,
+        cat: CATS.some(c => c.value === q.get('cat')) ? q.get('cat') : 'lives',
+        open: new Set(),
+    };
+
+    ctx.body.innerHTML = `
+        <div class="chip-row h-scroll" data-period></div>
+        <div class="stat-grid" data-summary></div>
+        <div class="stats-content"></div>`;
+    const periodEl = ctx.body.querySelector('[data-period]');
+    const summaryEl = ctx.body.querySelector('[data-summary]');
+    const content = ctx.body.querySelector('.stats-content');
+    let lives = [];
+    let images = new Map();
+
+    const syncQuery = () => ctx.setQuery({
+        tab: state.year ? 'year' : undefined,
+        y: state.year || undefined,
+        cat: state.cat === 'lives' ? undefined : state.cat,
+    });
+
+    periodEl.addEventListener('click', e => {
+        const chip = e.target.closest('[data-year]');
+        if (!chip) return;
+        const year = chip.dataset.year === 'all' ? null : +chip.dataset.year;
+        if (year === state.year) return;
+        tick();
+        state.year = year;
+        state.open.clear();
+        syncQuery();
+        drawAll(true);
+    });
+
+    summaryEl.addEventListener('click', e => {
+        const tile = e.target.closest('[data-cat]');
+        if (!tile || tile.dataset.cat === state.cat) return;
+        tick();
+        state.cat = tile.dataset.cat;
+        state.open.clear();
+        syncQuery();
+        drawContent(true);
+    });
+
+    content.addEventListener('click', e => {
+        if (e.target.closest('a')) return;
+        const row = e.target.closest('[data-toggle]');
+        if (!row) return;
+        const item = row.closest('.rank-item');
+        const key = item.dataset.key;
+        tick();
+        if (state.open.has(key)) state.open.delete(key);
+        else state.open.add(key);
+        item.classList.toggle('is-open', state.open.has(key));
+    });
+
+    function drawAll(swap = false) {
+        const years = availableYears(lives);
+        if (state.year && !years.includes(state.year)) state.year = years[0] || null;
+        periodEl.innerHTML = [`<button type="button" class="chip pressable ${state.year ? '' : 'is-selected'}" data-year="all">全期間</button>`]
+            .concat(years.map(y => `<button type="button" class="chip pressable ${state.year === y ? 'is-selected' : ''}" data-year="${y}">${y}年</button>`)).join('');
+        const scoped = filterYear(lives, state.year);
+        const counts = {
+            lives: scoped.length,
+            artists: rankArtists(scoped).length,
+            venues: rankVenues(scoped).length,
+            tracks: rankTracks(scoped).length,
+        };
+        summaryEl.innerHTML = CATS.map(c => `<button type="button" class="stat-button pressable ${state.cat === c.value ? 'is-selected' : ''}" data-cat="${c.value}">
+            ${statTile(c.label, `<span class="num">${nf.format(counts[c.value])}</span>`, '', { compact: true })}</button>`).join('');
+        drawContent(swap);
+    }
+
+    function drawContent(swap = false) {
+        summaryEl.querySelectorAll('[data-cat]').forEach(b => b.classList.toggle('is-selected', b.dataset.cat === state.cat));
+        const scoped = filterYear(lives, state.year);
+        const prev = state.year ? filterYear(lives, state.year - 1) : null;
+        content.innerHTML = renderCategory(state, scoped, prev, images);
+        if (swap) {
+            content.classList.remove('fade-swap');
+            void content.offsetWidth;
+            content.classList.add('fade-swap');
+        }
+        ctx.reveal(content);
+    }
+
+    async function load() {
+        [lives, images] = await Promise.all([loadLives(), loadArtistImages()]);
+        if (lives.length === 0) {
+            periodEl.innerHTML = '';
+            summaryEl.innerHTML = '';
+            content.innerHTML = emptyState({ iconName: 'chart', title: 'まだ記録がありません', body: 'ライブを記録すると、ここにランキングや集計が表示されます。' });
+            return;
+        }
+        drawAll();
+    }
+
+    ctx.onData(load);
+    await load();
 }
 
-export async function renderStats(container) {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tab = urlParams.get('tab') || 'total';
-    let currentYear = urlParams.get('y') ? parseInt(urlParams.get('y')) : new Date().getFullYear();
-
-    const rawLives = await db.lives.toArray();
-    
-    // Sort and process lives
-    const lives = rawLives.map(l => processLiveData(l)).sort((a, b) => a.concert_date > b.concert_date ? -1 : 1);
-
-    // Filter by year if needed
-    let filteredLives = lives;
-    let availableYearsSet = new Set();
-    lives.forEach(l => {
-        if(l.concert_date) {
-            availableYearsSet.add(new Date(l.concert_date).getFullYear());
-        }
-    });
-    
-    let availableYears = Array.from(availableYearsSet).sort((a,b) => b - a);
-    if (availableYears.length === 0) availableYears = [currentYear];
-    if (!availableYears.includes(currentYear)) {
-        currentYear = availableYears[0];
-    }
-
-    if (tab === 'year') {
-        filteredLives = lives.filter(l => new Date(l.concert_date).getFullYear() === currentYear);
-    }
-
-    // Calculations
-    const trackMap = {};
-    const venueMap = {};
-    const artistMap = {};
-
-    filteredLives.forEach(live => {
-        if (live.venue) {
-            if (!venueMap[live.venue]) {
-                venueMap[live.venue] = { count: 0, lives: [] };
-            }
-            venueMap[live.venue].count++;
-            venueMap[live.venue].lives.push({ id: live.id, date: live.concert_date, title: live.title });
-        }
-
-        if (live.performances) {
-            live.performances.forEach(perf => {
-                const aName = perf.artist_name || 'Unknown';
-                artistMap[aName] = (artistMap[aName] || 0) + 1;
-
-                if (perf.setlist) {
-                    perf.setlist.split(/\r?\n|\\n/).forEach(song => {
-                        const s = song.trim();
-                        if (s) {
-                            const key = aName + '|' + s;
-                            if (!trackMap[key]) {
-                                trackMap[key] = { artist: aName, song: s, count: 0, lives: [] };
-                            }
-                            trackMap[key].count++;
-                            trackMap[key].lives.push({ id: live.id, date: live.concert_date, title: live.title });
-                        }
-                    });
-                }
-            });
-        }
-    });
-
-    const venueRanking = Object.keys(venueMap).map(k => ({
-        name: k,
-        count: venueMap[k].count,
-        lives: venueMap[k].lives.sort((a, b) => a.date > b.date ? 1 : -1)
-    })).sort((a, b) => b.count - a.count);
-    const artistRanking = Object.keys(artistMap).map(k => ({ name: k, count: artistMap[k] })).sort((a, b) => b.count - a.count);
-    const trackRanking = Object.values(trackMap)
-        .map(t => {
-            t.lives.sort((a, b) => a.date > b.date ? 1 : -1);
-            return t;
-        })
-        .sort((a, b) => b.count - a.count);
-
-    const topBarContainer = document.getElementById('top-bar-container');
-    const existingPill = topBarContainer.querySelector('.top-nav-pill');
-    if (existingPill) {
-        const links = existingPill.querySelectorAll('a');
-        const leftLink = links[0];
-        const rightLink = links[1];
-
-        leftLink.href = `/stats?tab=year&y=${currentYear}`;
-        leftLink.className = `nav-st-year ${tab === 'year' ? 'active' : ''}`;
-        leftLink.textContent = 'year';
-        leftLink.dataset.nav = 'tab';
-
-        rightLink.href = `/stats?tab=total`;
-        rightLink.className = `nav-st-total ${tab === 'total' ? 'active' : ''}`;
-        rightLink.textContent = 'total';
-        rightLink.dataset.nav = 'tab';
-
-        const track = existingPill.querySelector('.liquid-capsule-track');
-        const wasTotal = track.classList.contains('right');
-        track.classList.toggle('right', tab === 'total');
-        track.classList.toggle('left', tab !== 'total');
-        if (wasTotal !== (tab === 'total')) {
-            triggerCapsuleMorph(track);
-        }
-    } else {
-        topBarContainer.innerHTML = `
-            <div class="fixed-top-bar transparent-top-bar">
-                <div class="top-bar-wash"></div>
-                <div class="liquid-glass top-nav-pill">
-                    <div class="liquid-capsule-track ${tab === 'total' ? 'right' : 'left'}">
-                        <div class="liquid-capsule"></div>
-                    </div>
-                    <a href="/stats?tab=year&y=${currentYear}" class="nav-st-year ${tab === 'year' ? 'active' : ''}" data-nav="tab">year</a>
-                    <a href="/stats?tab=total" class="nav-st-total ${tab === 'total' ? 'active' : ''}" data-nav="tab">total</a>
-                </div>
-                <a href="/search" class="liquid-glass liquid-glass-control dynamic-search-btn" aria-label="検索">
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                </a>
-            </div>
-        `;
-    }
-
-    let html = '';
-
+function renderCategory(state, lives, prevLives, images) {
+    const periodLabel = state.year ? `${state.year}年` : '全期間';
     if (lives.length === 0) {
-        html += `
-            <div class="empty-state" style="margin-top: 100px;">
-                <div style="font-size: 48px; margin-bottom: 16px;">🎸</div>
-                <h3>No Live Records Yet</h3>
-                <p style="font-size: 14px;">Add your first concert by tapping the <span style="font-weight: bold; color: var(--text-main);">＋</span> button in the bottom right!</p>
-            </div>
-        `;
-        container.innerHTML = html;
-        return;
+        return emptyState({ iconName: 'calendar', title: `${periodLabel}のライブはありません` });
+    }
+    if (state.cat === 'lives') {
+        const sorted = [...lives].reverse();
+        return `${sectionHeader('ライブ記録', { count: `${nf.format(sorted.length)}件` })}
+            <div class="list">${sorted.map((l, i) => liveRow(l, { reveal: Math.min(i, 8) * 40 })).join('')}</div>`;
     }
 
-    if (tab === 'year') {
-        let currentIdx = availableYears.indexOf(currentYear);
-        html += `<div class="year-selector">`;
-        if (currentIdx < availableYears.length - 1) {
-            const nextYear = availableYears[currentIdx + 1];
-            html += `<a href="/stats?tab=year&y=${nextYear}" data-nav="tab">＜</a>`;
-        } else {
-            html += `<span class="year-selector-placeholder">＜</span>`;
-        }
-        
-        html += `<span>${currentYear}</span>`;
-        
-        if (currentIdx > 0) {
-            const prevYear = availableYears[currentIdx - 1];
-            html += `<a href="/stats?tab=year&y=${prevYear}" data-nav="tab">＞</a>`;
-        } else {
-            html += `<span class="year-selector-placeholder">＞</span>`;
-        }
-        html += `</div>`;
+    const rankers = { artists: rankArtists, venues: rankVenues, tracks: rankTracks };
+    const list = assignRanks(rankers[state.cat](lives));
+    if (prevLives && prevLives.length) withDelta(list, rankers[state.cat](prevLives));
+    if (list.length === 0) {
+        return emptyState({ iconName: 'music', title: 'セットリストが未登録です', body: 'ライブ詳細の編集からセットリストを追加すると、曲のランキングが表示されます。' });
     }
+    const titles = { artists: 'アーティストランキング', venues: '会場ランキング', tracks: '曲ランキング' };
+    const [first, ...rest] = list;
+    return `${sectionHeader(titles[state.cat], { count: periodLabel })}
+        ${heroItem(state, first, images)}
+        <div class="rank-list">${rest.map((item, i) => rankItem(state, item, images, Math.min(i, 10) * 35)).join('')}</div>`;
+}
 
-    html += `
-        <div class="stats-grid">
-            <button type="button" class="stat-card active" id="card-lives" data-action="stats-tab" data-tab-target="lives">
-                <div class="stat-card-title">LIVE</div>
-                <div class="stat-card-value">${filteredLives.length}</div>
-            </button>
-            <button type="button" class="stat-card" id="card-tracks" data-action="stats-tab" data-tab-target="tracks">
-                <div class="stat-card-title">tracks</div>
-                <div class="stat-card-value">${trackRanking.length}</div>
-            </button>
-            <button type="button" class="stat-card" id="card-venues" data-action="stats-tab" data-tab-target="venues">
-                <div class="stat-card-title">venues</div>
-                <div class="stat-card-value">${venueRanking.length}</div>
-            </button>
-            <button type="button" class="stat-card" id="card-artists" data-action="stats-tab" data-tab-target="artists">
-                <div class="stat-card-title">artists</div>
-                <div class="stat-card-value">${artistRanking.length}</div>
-            </button>
+function itemArt(cat, item, images, size, extra = {}) {
+    if (cat === 'artists') return artwork({ src: images.get(item.name), seed: item.name, size, round: true, shared: `artist-${item.name}`, ...extra });
+    if (cat === 'venues') return `<div class="art art--icon" style="--s:${size}px">${icon('pin', Math.round(size * 0.36))}</div>`;
+    return trackArtwork(item.artist, item.song, size, extra);
+}
+
+function subtitle(cat, item) {
+    if (cat === 'tracks') return escapeHtml(item.artist);
+    return `最終 ${escapeHtml(formatDate(item.last))}`;
+}
+
+function livesList(item) {
+    const sorted = [...item.lives].sort((a, b) => a.concert_date.localeCompare(b.concert_date));
+    return `<div class="rank-expand"><div class="rank-expand-inner">
+        ${sorted.map(l => `<a href="/detail/${escapeHtml(l.id)}" class="expand-link pressable">
+            <span class="expand-date">${escapeHtml(formatDate(l.concert_date))}</span>
+            <span class="expand-title">${escapeHtml(l.title || l.card_main_title)}</span>
+            ${icon('chevronRight', 11)}
+        </a>`).join('')}
+    </div></div>`;
+}
+
+function spotifyButton(item) {
+    return `<a href="${escapeHtml(trackLink(item.artist, item.song) || spotifySearchUrl(item.artist, item.song))}" target="_blank" rel="noopener" class="icon-link pressable" aria-label="Spotifyで検索">${icon('external', 13)}</a>`;
+}
+
+function heroItem(state, item, images) {
+    const [c1] = seedColors(item.name);
+    const cat = state.cat;
+    const body = `
+        ${itemArt(cat, item, images, 96)}
+        <div class="hero-text">
+            <div class="hero-rank">No.1</div>
+            <div class="hero-title">${escapeHtml(item.name)}</div>
+            <div class="hero-sub">${subtitle(cat, item)}</div>
+            <div class="hero-value"><b class="num">${nf.format(item.count)}</b>回 ${deltaBadge(item.delta)}</div>
+        </div>`;
+    if (cat === 'artists') {
+        return `<a href="${escapeHtml(artistHref(item.name))}" class="hero-card pressable" style="--seed:${c1}" data-reveal="0">${body}</a>`;
+    }
+    return `<div class="rank-item ${state.open.has(item.key) ? 'is-open' : ''}" data-key="${escapeHtml(item.key)}" data-reveal="0">
+        <div class="hero-card pressable" style="--seed:${c1}" data-toggle role="button" tabindex="0">${body}
+            ${cat === 'tracks' ? `<div class="hero-action">${spotifyButton(item)}</div>` : ''}
         </div>
+        ${livesList(item)}
+    </div>`;
+}
 
-        <div class="section-title" id="list-title">live log</div>
-
-        <div id="lives" class="list-container active">
-            <div class="card-list">
-    `;
-
-    filteredLives.forEach(h => html += liveCard(h));
-
-    html += `
-            </div>
+function rankItem(state, item, images, delay) {
+    const cat = state.cat;
+    const inner = `
+        <span class="rank-num ${item.rank <= 3 ? 'is-top' : ''}">${item.rank}</span>
+        ${itemArt(cat, item, images, 44)}
+        <div class="media-text">
+            <div class="media-title">${escapeHtml(item.name)}</div>
+            <div class="media-sub">${subtitle(cat, item)}</div>
         </div>
-        
-        <div id="tracks" class="list-container">
-    `;
-
-    trackRanking.forEach((t, i) => {
-        html += `
-            <div class="accordion-item" data-accordion-id="track-${i}">
-                <div class="ranking-item accordion-header" data-action="accordion-toggle">
-                    <div class="ranking-name ranking-name-main">
-                        <div class="ranking-track-line">
-                            <a href="https://open.spotify.com/search/${encodeURIComponent(t.artist)} ${encodeURIComponent(t.song)}" target="_blank" rel="noopener" class="ranking-spotify-link">
-                                <svg class="spotify-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M8 11.973c2.5-1.473 5.5-.973 7.5.527M9 15c1.5-1 4-1 5 .5M7 9c3-2 6-2 9 0"></path></svg>
-                            </a>
-                            <span class="ranking-track-title">${escapeHtml(t.song)}</span>
-                        </div>
-                        <div class="ranking-track-artist">${escapeHtml(t.artist)}</div>
-                    </div>
-                    <div class="ranking-count">
-                        <span>${t.count}</span>times 
-                        <svg class="accordion-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </div>
-                </div>
-                <div class="accordion-wrapper">
-                    <div class="accordion-content">
-                        <div class="accordion-inner">
-        `;
-        t.lives.forEach(live => {
-            html += `
-                            <a href="/detail/${escapeHtml(live.id)}" class="accordion-live-link">
-                                <span class="accordion-live-date">${escapeHtml(live.date)}</span>
-                                <span class="accordion-live-title">${escapeHtml(live.title)}</span>
-                            </a>
-            `;
-        });
-        html += `
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    html += `
+        <div class="rank-trailing"><span class="rank-value num">${nf.format(item.count)}回</span>${deltaBadge(item.delta)}</div>`;
+    if (cat === 'artists') {
+        return `<a href="${escapeHtml(artistHref(item.name))}" class="rank-row pressable" data-reveal="${delay}">${inner}</a>`;
+    }
+    return `<div class="rank-item ${state.open.has(item.key) ? 'is-open' : ''}" data-key="${escapeHtml(item.key)}" data-reveal="${delay}">
+        <div class="rank-row pressable" data-toggle role="button" tabindex="0">${inner}
+            ${cat === 'tracks' ? spotifyButton(item) : ''}
+            <span class="rank-chevron">${icon('chevronDown', 13)}</span>
         </div>
-        <div id="venues" class="list-container">
-    `;
-
-    venueRanking.forEach((v, i) => {
-        html += `
-            <div class="accordion-item" data-accordion-id="venue-${i}">
-                <div class="ranking-item accordion-header" data-action="accordion-toggle">
-                    <div class="ranking-name ranking-name-main">${escapeHtml(v.name)}</div>
-                    <div class="ranking-count">
-                        <span>${v.count}</span>times
-                        <svg class="accordion-icon" viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
-                    </div>
-                </div>
-                <div class="accordion-wrapper">
-                    <div class="accordion-content">
-                        <div class="accordion-inner">
-        `;
-        v.lives.forEach(live => {
-            html += `
-                            <a href="/detail/${escapeHtml(live.id)}" class="accordion-live-link">
-                                <span class="accordion-live-date">${escapeHtml(live.date)}</span>
-                                <span class="accordion-live-title">${escapeHtml(live.title)}</span>
-                            </a>
-            `;
-        });
-        html += `
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    html += `
-        </div>
-        <div id="artists" class="list-container">
-    `;
-
-    artistRanking.forEach(a => {
-        html += `
-            <a href="/artist/${escapeHtml(encodeURIComponent(a.name))}" class="card-link">
-                <div class="ranking-item">
-                    <div class="ranking-name">${escapeHtml(a.name)}</div>
-                    <div class="ranking-count"><span>${a.count}</span>times <span class="ranking-chevron">＞</span></div>
-                </div>
-            </a>
-        `;
-    });
-
-    html += `
-        </div>
-    `;
-
-
-    container.innerHTML = html;
-
-    // Attach logic for tabs and accordions
-    container.querySelectorAll('[data-action="stats-tab"]').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const targetId = btn.getAttribute('data-tab-target');
-            
-            container.querySelectorAll('.list-container').forEach(el => {
-                el.classList.remove('active');
-                el.classList.remove('animate-fade');
-                void el.offsetWidth; // trigger reflow
-            });
-            container.querySelectorAll('.stat-card').forEach(el => el.classList.remove('active'));
-            
-            const targetEl = container.querySelector('#' + targetId);
-            if (targetEl) {
-                targetEl.classList.add('active');
-                targetEl.classList.add('animate-fade');
-            }
-            
-            btn.classList.add('active');
-
-            const titleEl = container.querySelector('#list-title');
-            if (titleEl) {
-                if (targetId === 'lives') titleEl.textContent = 'live log';
-                else if (targetId === 'tracks') titleEl.textContent = 'track ranking';
-                else if (targetId === 'venues') titleEl.textContent = 'venue ranking';
-                else if (targetId === 'artists') titleEl.textContent = 'artist ranking';
-            }
-        });
-    });
-
-    container.querySelectorAll('[data-action="accordion-toggle"]').forEach(el => {
-        el.addEventListener('click', () => {
-            const item = el.closest('.accordion-item');
-            if (el.classList.contains('active')) {
-                el.classList.remove('active');
-                if (item) item.classList.remove('open');
-            } else {
-                el.classList.add('active');
-                if (item) item.classList.add('open');
-            }
-        });
-    });
+        ${livesList(item)}
+    </div>`;
 }

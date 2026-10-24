@@ -1,3 +1,5 @@
+import { alertDialog } from './ui/components.js';
+
 export function setupImageUpload(container) {
     const input = container.querySelector('#image-input');
     const preview = container.querySelector('#image-preview');
@@ -7,13 +9,8 @@ export function setupImageUpload(container) {
 
     input.addEventListener('change', async (e) => {
         const file = e.target.files[0];
-        if (!file) {
-            input.dataset.base64 = '';
-            preview.src = '';
-            preview.hidden = true;
-            uploadIcon.hidden = false;
-            return;
-        }
+        // 選択をキャンセルしたときは、いま表示している写真をそのまま残す（表示と保存結果を食い違わせない）
+        if (!file) return;
 
         try {
             const base64 = await compressImage(file, 800); // Max 800px for JSON export size reduction
@@ -21,9 +18,10 @@ export function setupImageUpload(container) {
             preview.src = base64;
             preview.hidden = false;
             uploadIcon.hidden = true;
+            input.dispatchEvent(new CustomEvent('image-ready'));
         } catch (err) {
             console.error('Failed to compress image', err);
-            alert('画像の読み込みに失敗しました。');
+            alertDialog('画像を読み込めませんでした', '別の写真を選んでください。');
         }
     });
 }
