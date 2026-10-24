@@ -113,7 +113,7 @@ export function typeTag(live) {
 export function liveRow(live, { reveal, highlight = escapeHtml } = {}) {
     const upcoming = live.days_left !== undefined && live.days_left >= 0;
     const trailing = upcoming
-        ? `<span class="countdown-chip ${live.days_left <= 1 ? 'is-soon' : ''}">${escapeHtml(countdownLabel(live.days_left))}</span>`
+        ? `<span class="countdown-text ${live.days_left <= 1 ? 'is-soon' : ''}">${escapeHtml(countdownLabel(live.days_left))}</span>${typeTag(live)}`
         : typeTag(live);
     return `<a href="/detail/${escapeHtml(live.id)}" class="media-row pressable" ${reveal !== undefined ? `data-reveal="${reveal}"` : ''}>
         ${liveArtwork(live, { size: 52, shared: `live-${live.id}` })}

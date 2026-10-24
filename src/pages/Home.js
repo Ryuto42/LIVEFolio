@@ -95,7 +95,7 @@ function yearView(lives) {
             </a>
             <a href="/calendar" class="tile pressable">
                 <div class="tile-head">参戦カレンダー${icon('chevronRight', 11)}</div>
-                ${miniHeatmap(lives)}
+                ${recentCount(lives)}
             </a>
         </div>`;
 
@@ -119,23 +119,15 @@ function pastCard(live) {
     </a>`;
 }
 
-function miniHeatmap(lives) {
+function recentCount(lives) {
     const map = dayMap(lives);
     const today = parseDate(todayStr());
     const end = new Date(today);
     end.setDate(end.getDate() + (6 - end.getDay()));
     const start = new Date(end);
     start.setDate(start.getDate() - 7 * 14 + 1);
-    let cells = '';
     let total = 0;
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        const key = toDateStr(d);
-        const n = map.get(key)?.length || 0;
-        if (d <= today) total += n;
-        const level = n === 0 ? 0 : Math.min(4, n + 1);
-        cells += `<i class="hm-cell lv${level} ${d > today ? 'is-future' : ''}" style="--col:${Math.floor((d - start) / 604800000)}"></i>`;
-    }
+    for (let d = new Date(start); d <= today; d.setDate(d.getDate() + 1)) total += map.get(toDateStr(d))?.length || 0;
     return `<div class="main-number"><span class="num">${nf.format(total)}</span><small>回</small></div>
-        <div class="tile-note">直近14週</div>
-        <div class="mini-heatmap">${cells}</div>`;
+        <div class="tile-note">直近14週</div>`;
 }

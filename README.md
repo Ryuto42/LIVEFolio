@@ -7,7 +7,7 @@ LIVEFolio is an app for recording the live concerts you attend and looking back 
 ## Features
 
 - **Record lives**: one-man shows, festivals, and multi-artist shows (taiban), with photos, venues, and setlists
-- **Home**: countdown to your next live, your all-time totals, recent lives, and a mini calendar
+- **Home**: countdown to your next live, your all-time totals, recent lives, and a calendar shortcut
 - **Stats**: rankings for lives, artists, venues, and songs, filterable by year, with rank changes from the previous year
 - **Calendar**: a yearly heatmap of the days you went to lives, plus monthly and weekday charts
 - **Replay**: a story-style look back at each year
