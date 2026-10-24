@@ -27,3 +27,10 @@ dist-ssr
 .env
 .env.*
 *.db
+
+# Signing keys and native build outputs
+*.keystore
+*.jks
+*.p12
+*.mobileprovision
+android/app/release/

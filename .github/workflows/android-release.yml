@@ -1,0 +1,75 @@
+name: Build Android APK
+
+# v1.2.3 のようなタグを push すると APK をビルドし、GitHub Releases に添付する
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: npm ci
+      - run: npm run build
+      - run: npx cap sync android
+
+      - name: Version from tag
+        run: |
+          NAME="${GITHUB_REF_NAME#v}"
+          [ "$GITHUB_REF_TYPE" = "tag" ] || NAME="0.0.0-dev"
+          echo "APP_VERSION_NAME=$NAME" >> "$GITHUB_ENV"
+          echo "APP_VERSION_CODE=$GITHUB_RUN_NUMBER" >> "$GITHUB_ENV"
+
+      # 署名鍵は Secrets に登録したときだけ使う。未登録ならデバッグ署名の APK を作る
+      - name: Decode signing key
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/release.keystore" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build APK
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          chmod +x gradlew
+          if [ -n "$ANDROID_KEYSTORE_PATH" ]; then
+            ./gradlew assembleRelease --no-daemon
+            cp app/build/outputs/apk/release/app-release.apk "$RUNNER_TEMP/LIVEFolio-$APP_VERSION_NAME.apk"
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk "$RUNNER_TEMP/LIVEFolio-$APP_VERSION_NAME-debug.apk"
+          fi
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk
+          path: ${{ runner.temp }}/LIVEFolio-*.apk
+
+      - name: Attach to release
+        if: github.ref_type == 'tag'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ runner.temp }}/LIVEFolio-*.apk
+          generate_release_notes: true
