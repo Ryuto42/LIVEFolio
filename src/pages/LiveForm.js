@@ -22,11 +22,19 @@ function perfCard(perf = {}) {
             <span class="field-label">アーティスト名 <em>*</em></span>
             <input type="text" name="artist_name[]" list="artist-list" value="${escapeHtml(perf.artist_name || '')}" required>
         </label>
-        <label class="field">
-            <span class="field-label">セットリスト（1行に1曲）</span>
-            <textarea name="setlist[]" rows="5">${escapeHtml(perf.setlist || '')}</textarea>
-        </label>
+        <div class="field">
+            <div class="field-head">
+                <span class="field-label">セットリスト（1行に1曲）</span>
+                <button type="button" class="setlist-search-btn pressable">${icon('search', 12)}セトリを検索</button>
+            </div>
+            <textarea name="setlist[]" rows="5" aria-label="セットリスト">${escapeHtml(perf.setlist || '')}</textarea>
+        </div>
     </div>`;
+}
+
+function setlistSearchUrl(artist, title, date) {
+    const q = [artist, title, date && date.replaceAll('-', '/'), 'セトリ'].filter(Boolean).join(' ');
+    return `https://www.google.com/search?q=${encodeURIComponent(q)}`;
 }
 
 async function datalists() {
@@ -152,6 +160,19 @@ async function renderForm(ctx, live) {
     });
 
     container.addEventListener('click', e => {
+        const search = e.target.closest('.setlist-search-btn');
+        if (search) {
+            const artistInput = search.closest('.performance-group').querySelector('[name="artist_name[]"]');
+            const artist = artistInput.value.trim();
+            if (!artist) {
+                artistInput.closest('.field').classList.add('is-invalid');
+                artistInput.focus();
+                toast('アーティスト名を入力してください');
+                return;
+            }
+            window.open(setlistSearchUrl(artist, form.event_title.value.trim(), form.concert_date.value), '_blank', 'noopener');
+            return;
+        }
         const btn = e.target.closest('.remove-btn');
         if (!btn) return;
         btn.closest('.performance-group').remove();

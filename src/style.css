@@ -984,6 +984,8 @@ button.year-bar { --press-scale: 0.98; cursor: pointer; }
 .field-label { font-size: 12px; font-weight: 600; color: var(--text-3); }
 .field-label em { font-style: normal; color: var(--accent); }
 .field.is-invalid .field-label { color: var(--down); }
+.field-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.setlist-search-btn { --press-scale: 0.92; display: inline-flex; align-items: center; gap: 4px; border: none; background: none; padding: 2px 0; color: var(--accent); font-size: 13px; }
 .field input, .field textarea {
     width: 100%;
     border: none;
